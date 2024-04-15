@@ -12,13 +12,13 @@ import (
 
 // определение структуры файла
 type file struct {
-	Typefile    string `json:"typefile"`
-	Name        string `json:"name"`
-	sizeInBytes int64  `json:"size"`
-	SizeInKB    string `json:"sizeInKB"`
+	Typefile    string `json:"typefile"` //поле Тип файла
+	Name        string `json:"name"`     //поле Имя файла
+	sizeInBytes int64  `json:"size"`     //поле размер файла в байтах
+	SizeInKB    string `json:"sizeInKB"` //поле размер файла в КБ
 }
 
-// Метод для создания структурой файла
+// Функция создает структуру file с полями Typefile, Name и SizeInKB.
 func newfile(typefile string, name string, size string) file {
 	return file{
 		Typefile: typefile,
@@ -34,10 +34,10 @@ type readPath interface {
 
 // Папка структуры
 type Root struct {
-	Name string
+	Name string //поле имя файлы
 }
 
-// Реализация метода(GetsubDir) интерфейса
+// функция используется для чтения файлов в текущем каталоге.
 func (root *Root) GetSubDir(dirname string) ([]file, error) {
 	var datafiles []file
 	var size int64 = 0
@@ -66,14 +66,17 @@ func (root *Root) GetSubDir(dirname string) ([]file, error) {
 
 	return datafiles[1:len(datafiles)], nil
 }
-func BytesToKB(size int64) string {
 
+// функция для преобразования байта в КБ.
+func BytesToKB(size int64) string {
 	sizeInBytes := size
 	sizeInKB := float64(sizeInBytes) / 1024
 	sizeInKBStr := fmt.Sprintf("%.9f", sizeInKB)
 
 	return sizeInKBStr + "KB"
 }
+
+// функция возвращает массив файлов из текущего каталоге.
 func GetData(root string) []file {
 	pathDir := Root{Name: root}
 	dataTable, err := pathDir.GetSubDir(pathDir.Name)

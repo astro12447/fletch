@@ -110,10 +110,9 @@ func GetFilePathFromCommand(root string, sort string) (string, string, error) {
 
 }
 
-// si es una carpeta esta vacia, entra y calcula su size + el size del  contenido interno
-// then agregamos el contenido interno del la primera capa
-// si es carpeta calculamos su size, then agregamos a la tabla
-
+// Функция используется для чтения файлов в текущем каталоге.
+// Функция len используется для получения количества файлов в каталоге.
+// Если количество файлов равно 0, каталог пуст. В противном случае каталог содержит элементы.
 func DirectoryContainsElements(path string) (bool, error) {
 	// Abre el directorio
 	dir, err := os.Open(path)
@@ -122,12 +121,12 @@ func DirectoryContainsElements(path string) (bool, error) {
 	}
 	defer dir.Close()
 
-	// Lee todas las entradas del directorio
+	// читание все записи каталога
 	entries, err := dir.Readdir(-1)
 	if err != nil {
 		return false, err
 	}
-	// Si la lista de entradas está vacía, el directorio no contiene elementos
+
 	return len(entries) > 0, nil
 }
 

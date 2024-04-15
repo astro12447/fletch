@@ -204,7 +204,6 @@ func SelectSort(files []file, root string, sortMode string) {
 		for i := range files {
 			files[i].print()
 		}
-		fmt.Println("")
 	default:
 		log.Fatal("->Введите правильную командную строку:(--root=/pathfile  --sort=Desc) or --root=/pathfile")
 	}

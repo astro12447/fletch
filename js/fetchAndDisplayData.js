@@ -1,11 +1,14 @@
 // JavaScript-файл
 // Функция для получения данных JSON с сервера
-function fetchItems() {
-    fetch('http://localhost:8080/files')
+// Get the current URL
+
+function fetchAndDisplayData() {
+    fetch("/files?root=/Users/ismaelnvo/Desktop/scanner-post/ui/files&sort=Desc")
         .then(response => response.json())
         .then(data => {
             //  Отобразование данные на странице.
             displayItems(data)
+            console.log(data)
         })
         .catch(error => {
             console.error('Error:', error);
@@ -35,5 +38,5 @@ function displayItems(items) {
     });
 }
 
-// Вызов функции для получения элементов
-fetchItems()
+// затем вызывается функция fetchAndDisplayData, когда это событие  срабатывает
+window.onload = fetchAndDisplayData;

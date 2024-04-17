@@ -5,12 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"functions/functions"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 )
+
+type Config struct {
+	Port int64
+}
 
 // Получение значение из «url» параметра
 func getUrlParameter(req *http.Request, paramName string) string {
@@ -62,18 +67,29 @@ func main() {
 	//Загрузка файлы в сервер  с помощью ServeMux по пути /js/.
 	mux.Handle("/js/", http.StripPrefix("/js/", jsFileServer))
 	// Создание HTTP-сервер
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: mux,
+	// Read the config file
+	configData, err := os.ReadFile("ui/config.json")
+	if err != nil {
+		log.Fatalf("Не удалось прочитать файл конфигурации: %v", err)
+	}
+	var config Config
+	err = json.Unmarshal(configData, &config)
+	if err != nil {
+		log.Fatalf("Не удалось проанализировать файл конфигурации.: %v", err)
 	}
 
+	server := &http.Server{
+		Addr:    fmt.Sprintf(":%d", config.Port),
+		Handler: mux,
+	}
 	// Создайте канал для прослушивания ошибок, исходящих от прослушивателя. Использовать
 	// буферизованный канал, чтобы горутина могла завершить работу, если мы не обнаружим эту ошибку.
 	serverErrors := make(chan error, 1)
+	otherErrors := make(chan error)
 
 	// Запуска сервера в горутине
 	go func() {
-		fmt.Println("Server is running on port 8080")
+		fmt.Println("Сервер работает на порту 8080")
 		serverErrors <- server.ListenAndServe()
 	}()
 
@@ -85,9 +101,9 @@ func main() {
 	// Блокировка основного и ожидание выключения.
 	select {
 	case err := <-serverErrors:
-		fmt.Printf("Error starting server: %v\n", err)
+		fmt.Printf("Ошибка запуска сервера: %v\n", err)
 	case <-shutdown:
-		fmt.Println("Starting shutdown...")
+		fmt.Println("Начало выключения...")
 		const timeout = 5 * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -101,6 +117,9 @@ func main() {
 		if err != nil {
 			fmt.Printf("Не удалось корректно остановить сервер: %v\n", err)
 		}
+	case err := <-otherErrors:
+		// Здесь обрабатываются другие типы ошибок
+		fmt.Printf("Возникла ошибка: %v\n", err)
+		// В зависимости от ошибки вы можете захотеть выключить сервер или предпринять другие действия.
 	}
-
 }

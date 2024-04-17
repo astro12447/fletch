@@ -3,10 +3,12 @@ package functions
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
+	"sync"
 )
 
 // определение структуры файла
@@ -38,6 +40,7 @@ type Root struct {
 }
 
 // функция используется для чтения файлов в текущем каталоге.
+
 func (root *Root) GetSubDir(dirname string) ([]file, error) {
 	if !RootExist(dirname) {
 		log.Fatalln("Данный файл или каталог отсутствует!")
@@ -47,31 +50,37 @@ func (root *Root) GetSubDir(dirname string) ([]file, error) {
 	if err != nil {
 		panic(err)
 	}
+	var wg sync.WaitGroup
 	for _, file := range files {
-		if file.IsDir() {
-			info, err := file.Info()
-			path, err := getFileLocation(dirname, info.Name())
-			if err != nil {
-				panic(err)
+		wg.Add(1)
+		go func(file fs.DirEntry) {
+			defer wg.Done()
+			if file.IsDir() {
+				info, err := file.Info()
+				path, err := getFileLocation(dirname, info.Name())
+				if err != nil {
+					panic(err)
+				}
+				size, err := dirSize(path)
+				if err != nil {
+					panic(err)
+				}
+				Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
+			} else if file.Type().IsRegular() {
+				info, err := file.Info()
+				if err != nil {
+					panic(err)
+				}
+				path, err := getFileLocation(dirname, info.Name())
+				if err != nil {
+					panic(err)
+				}
+				Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size()))
 			}
-			size, err := dirSize(path)
-			if err != nil {
-				panic(err)
-			}
-			Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
-		} else if file.Type().IsRegular() {
-			info, err := file.Info()
-			if err != nil {
-				panic(err)
-			}
-			path, err := getFileLocation(dirname, info.Name())
-			if err != nil {
-				panic(err)
-			}
-			Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size()))
-		}
 
+		}(file)
 	}
+	wg.Wait()
 	return Items, nil
 }
 func getFileLocation(root string, filename string) (string, error) {

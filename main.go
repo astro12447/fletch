@@ -12,12 +12,7 @@ import (
 	"time"
 )
 
-// Функция для отправки массива данных JSON.
-type RequestBody struct {
-	Path string `json:"path"`
-}
-
-// Получить значение указанного параметра
+// Получение значение из «url» параметра
 func getUrlParameter(req *http.Request, paramName string) string {
 	return req.URL.Query().Get(paramName)
 }
@@ -30,20 +25,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Выведите значения на консоль
 	fmt.Println("Root value:", rootValue)
 	fmt.Println("Sort value:", sortValue)
-	sendJSON(w, r, rootValue, sortValue)
+
+	sendJSONResponse(w, r, rootValue, sortValue)
+	fmt.Println("JSON Отправлен")
 }
 
 // отправить данные в JSON
-func sendJSON(w http.ResponseWriter, r *http.Request, root string, sort string) {
-	pathdir := functions.Root{Name: root}
-	data, err := pathdir.GetSubDir(pathdir.Name)
+func sendJSONResponse(w http.ResponseWriter, r *http.Request, root string, sort string) {
+	data := functions.GetData(root)
 	sortSlice := functions.SortSlice(data, root, sort)
-	for _, item := range sortSlice {
-		fmt.Println(item.SizeInKB)
-	}
-	if err != nil {
-		panic(err)
-	}
+
 	// Маршалируем данные в JSON
 	jsonData, err := json.Marshal(sortSlice)
 	if err != nil {

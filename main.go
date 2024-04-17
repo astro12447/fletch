@@ -40,7 +40,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 // функция, которая отправляет клиенту ответ JSON.
 func sendJSONResponse(w http.ResponseWriter, r *http.Request, root string, sort string) {
-	data := functions.GetDataRoutine(root)
+	data, err := functions.GetDirPath(root)
 	sortSlice := functions.SortSlice(data, root, sort)
 
 	// Маршалируем данные в JSON
@@ -85,7 +85,6 @@ func main() {
 		Addr:    fmt.Sprintf(":%d", config.Port),
 		Handler: mux,
 	}
-
 	// Создайте 2 каналa для прослушивания ошибок, исходящих от прослушивателя. Использовать
 	// буферизованный канал, чтобы горутина могла завершить работу, если мы не обнаружим эту ошибку.
 	serverErrors := make(chan error)
@@ -118,18 +117,10 @@ func main() {
 		if err != nil {
 			fmt.Printf("Не удалось корректно остановить сервер: %v\n", err)
 		}
-	case err := <-otherErrors:
-		fmt.Printf("Возникла ошибка: %v\n", err)
-	}
-	// Дополнительный случай для обработки http.ErrServerClosed
-	select {
-	case err := <-serverErrors:
 		if err == http.ErrServerClosed {
 			fmt.Println("Сервер успешно завершил работу")
-		} else {
-			fmt.Printf("Ошибка запуска сервера: %v\n", err)
 		}
-	default:
-		fmt.Println("Ошибок сервера нет. Продолжайте выполнять остальную логику приложения.")
+	case err := <-otherErrors:
+		fmt.Printf("Возникла ошибка: %v\n", err)
 	}
 }

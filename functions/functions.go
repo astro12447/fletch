@@ -1,7 +1,6 @@
 package functions
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +9,7 @@ import (
 	"sync"
 )
 
-// определение структуры файла
+// Предполагая, что «file» — это структура, представляющая файл.
 type file struct {
 	Typefile    string `json:"typefile"` //поле Тип файла
 	Name        string `json:"name"`     //поле Имя файла
@@ -18,7 +17,7 @@ type file struct {
 	SizeInBytes int64  `json:"sizeInBytes"`
 }
 
-// Функция создает структуру file с полями тип файл, имя файла и размер файля в KB.
+// «newfile» является функцией-конструктором файловой структуры
 func newfile(typefile string, name string, sizeInKB string, sizeInBytes int64) file {
 	return file{
 		Typefile:    typefile,
@@ -28,18 +27,17 @@ func newfile(typefile string, name string, sizeInKB string, sizeInBytes int64) f
 	}
 }
 
-// Интерфейс(ReadPath) с методом для считания root
+// «readPath» — это интерфейс, определяющий метод получения подкаталогов.
 type readPath interface {
 	GetsubDir(root string) ([]file, error)
 }
 
-// Папка структуры
+// определение структуры для «Root» с одним полем «Name», которое предназначено для представления имени файла или каталога.
 type Root struct {
 	Name string //поле имя файлы
 }
 
 // функция используется для чтения файлов в текущем каталоге.
-
 func (root *Root) GetSubDir(dirname string) ([]file, error) {
 	if !RootExist(dirname) {
 		log.Fatalln("Данный файл или каталог отсутствует!")
@@ -100,9 +98,12 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 			if err != nil {
 				panic(err)
 			}
+			//Заблокируем мьютекс перед доступом к общему ресурсу.
 			mutex.Lock()
-			Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
+			//Убедимся, что мьютекс разблокирован после завершения этой горутины.
 			defer mutex.Unlock()
+			//Критический раздел: общий ресурс защищен мьютексом.
+			Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
 		} else if file.Type().IsRegular() {
 			info, err := file.Info()
 			if err != nil {
@@ -117,20 +118,22 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 	}
 	return Items, nil
 }
+
+// getFileLocation создает путь к файлу для данного имени файла в корневом каталоге.
 func getFileLocation(root string, filename string) (string, error) {
 	if !RootExist(root) {
-		return "", errors.New("Данный файл или каталог отсутствует!!")
+		log.Fatalln("Данный файл или каталог отсутствует!!")
 	}
-	return root + "/" + filename, nil
+	return root + string(os.PathSeparator) + filename, nil
 }
 
-// функция для преобразования байта в КБ.
+// функция BytesToKB преобразует размер в байтах в килобайты (КБ) и возвращает его в виде строки.
 func BytesToKB(size int64) string {
 	sizeInKBStr := fmt.Sprintf("%.9f", (float64(size) / 1024))
 	return sizeInKBStr + "KB"
 }
 
-// функция возвращает массив файлов из текущего каталоге.
+// функция GetData извлекает данные из корневого каталога.
 func GetData(root string) []file {
 	pathDir := Root{Name: root}
 	dataTable, err := pathDir.GetSubDir(pathDir.Name)
@@ -139,6 +142,8 @@ func GetData(root string) []file {
 	}
 	return dataTable
 }
+
+// функция GetData извлекает данные из корневого каталога.
 func GetDataRoutine(root string) []file {
 	pathDir := Root{Name: root}
 	dataTable, err := pathDir.GetSubDir(pathDir.Name)
@@ -153,10 +158,9 @@ func (ob *file) print() {
 	fmt.Println("Type:", ob.Typefile, "Name:", ob.Name, "FileSize/byte", ob.SizeInBytes)
 }
 
+// dirSize вычисляет общий размер всех файлов в каталоге и его подкаталогах.
 func dirSize(path string) (int64, error) {
 	var size int64
-
-	// Walk the directory tree
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

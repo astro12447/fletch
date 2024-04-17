@@ -3,7 +3,6 @@ package functions
 import (
 	"errors"
 	"fmt"
-	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -50,37 +49,72 @@ func (root *Root) GetSubDir(dirname string) ([]file, error) {
 	if err != nil {
 		panic(err)
 	}
-	var wg sync.WaitGroup
 	for _, file := range files {
-		wg.Add(1)
-		go func(file fs.DirEntry) {
-			defer wg.Done()
-			if file.IsDir() {
-				info, err := file.Info()
-				path, err := getFileLocation(dirname, info.Name())
-				if err != nil {
-					panic(err)
-				}
-				size, err := dirSize(path)
-				if err != nil {
-					panic(err)
-				}
-				Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
-			} else if file.Type().IsRegular() {
-				info, err := file.Info()
-				if err != nil {
-					panic(err)
-				}
-				path, err := getFileLocation(dirname, info.Name())
-				if err != nil {
-					panic(err)
-				}
-				Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size()))
-			}
 
-		}(file)
+		if file.IsDir() {
+			info, err := file.Info()
+			path, err := getFileLocation(dirname, info.Name())
+			if err != nil {
+				panic(err)
+			}
+			size, err := dirSize(path)
+			if err != nil {
+				panic(err)
+			}
+			Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
+		} else if file.Type().IsRegular() {
+			info, err := file.Info()
+			if err != nil {
+				panic(err)
+			}
+			path, err := getFileLocation(dirname, info.Name())
+			if err != nil {
+				panic(err)
+			}
+			Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size()))
+		}
+
 	}
-	wg.Wait()
+	return Items, nil
+}
+
+var mutex sync.Mutex
+
+func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
+	if !RootExist(dirname) {
+		log.Fatalln("Данный файл или каталог отсутствует!")
+	}
+	files, err := os.ReadDir(dirname)
+	var Items []file
+	if err != nil {
+		panic(err)
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			info, err := file.Info()
+			path, err := getFileLocation(dirname, info.Name())
+			if err != nil {
+				panic(err)
+			}
+			size, err := dirSize(path)
+			if err != nil {
+				panic(err)
+			}
+			mutex.Lock()
+			Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
+			defer mutex.Unlock()
+		} else if file.Type().IsRegular() {
+			info, err := file.Info()
+			if err != nil {
+				panic(err)
+			}
+			path, err := getFileLocation(dirname, info.Name())
+			if err != nil {
+				panic(err)
+			}
+			Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size()))
+		}
+	}
 	return Items, nil
 }
 func getFileLocation(root string, filename string) (string, error) {
@@ -98,6 +132,14 @@ func BytesToKB(size int64) string {
 
 // функция возвращает массив файлов из текущего каталоге.
 func GetData(root string) []file {
+	pathDir := Root{Name: root}
+	dataTable, err := pathDir.GetSubDir(pathDir.Name)
+	if err != nil {
+		panic(err)
+	}
+	return dataTable
+}
+func GetDataRoutine(root string) []file {
 	pathDir := Root{Name: root}
 	dataTable, err := pathDir.GetSubDir(pathDir.Name)
 	if err != nil {

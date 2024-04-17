@@ -37,7 +37,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 // отправить данные в JSON
 func sendJSONResponse(w http.ResponseWriter, r *http.Request, root string, sort string) {
-	data := functions.GetData(root)
+	data := functions.GetDataRoutine(root)
 	sortSlice := functions.SortSlice(data, root, sort)
 
 	// Маршалируем данные в JSON
@@ -82,6 +82,7 @@ func main() {
 		Addr:    fmt.Sprintf(":%d", config.Port),
 		Handler: mux,
 	}
+
 	// Создайте канал для прослушивания ошибок, исходящих от прослушивателя. Использовать
 	// буферизованный канал, чтобы горутина могла завершить работу, если мы не обнаружим эту ошибку.
 	serverErrors := make(chan error, 1)
@@ -89,10 +90,9 @@ func main() {
 
 	// Запуска сервера в горутине
 	go func() {
-		fmt.Println("Сервер работает на порту 8080")
 		serverErrors <- server.ListenAndServe()
 	}()
-
+	fmt.Println("Сервер работает на порту 8080")
 	// Создание канал для прослушивания сигнала прерывания или завершения от ОС.
 	// Использование буферизованный канал, поскольку этого требует пакет сигналов.
 	shutdown := make(chan os.Signal, 1)
@@ -119,7 +119,10 @@ func main() {
 		}
 	case err := <-otherErrors:
 		// Здесь обрабатываются другие типы ошибок
-		fmt.Printf("Возникла ошибка: %v\n", err)
-		// В зависимости от ошибки вы можете захотеть выключить сервер или предпринять другие действия.
+		if err == http.ErrServerClosed {
+			fmt.Println("Сервер успешно завершил работу")
+		} else {
+			fmt.Printf("Ошибка запуска сервера: %v\n", err)
+		}
 	}
 }

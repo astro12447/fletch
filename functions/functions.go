@@ -37,9 +37,7 @@ type Root struct {
 	Name string //поле имя файлы
 }
 
-// функция используется для чтения файлов в текущем каталоге.
-var mutex sync.Mutex
-
+// функция используется для чтения файлов в текущем каталоге mutex
 func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 	if !RootExist(dirname) {
 		log.Fatalln("Данный файл или каталог отсутствует!")
@@ -49,76 +47,38 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 	if err != nil {
 		panic(err)
 	}
-	for _, file := range files {
-		if file.IsDir() {
-			info, err := file.Info()
-			path, err := getFileLocation(dirname, info.Name())
-			if err != nil {
-				panic(err)
-			}
-			size, err := dirSize(path)
-			if err != nil {
-				panic(err)
-			}
-			//Заблокируем мьютекс перед доступом к общему ресурсу.
-			mutex.Lock()
-			//Убедимся, что мьютекс разблокирован после завершения этой горутины.
-			defer mutex.Unlock()
-			//Критический раздел: общий ресурс защищен мьютексом.
-			Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
-		} else if file.Type().IsRegular() {
-			info, err := file.Info()
-			if err != nil {
-				panic(err)
-			}
-			path, err := getFileLocation(dirname, info.Name())
-			if err != nil {
-				panic(err)
-			}
-			Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size()))
-		}
-	}
-	return Items, nil
-}
-
-func GetDirPath(dirname string) ([]file, error) {
-	if !RootExist(dirname) {
-		log.Fatalln("Данный файл или каталог отсутствует!")
-	}
-
-	files, err := os.ReadDir(dirname)
-	if err != nil {
-		return nil, err
-	}
-	var Items []file
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-
 	for _, entry := range files {
 		wg.Add(1)
 		go func(entry os.DirEntry) {
-			defer wg.Done()
-			path := filepath.Join(dirname, entry.Name())
-			info, err := entry.Info()
-			if err != nil {
-				log.Printf("Ошибка получения информации для %s: %v\n", path, err)
-				return
-			}
+			wg.Done()
 			if entry.IsDir() {
+				path, err := getFileLocation(dirname, entry.Name())
+				if err != nil {
+					panic(err)
+				}
 				size, err := dirSize(path)
 				if err != nil {
-					log.Printf("Ошибка расчета размера каталога для %s: %v\n", path, err)
-					return
+					panic(err)
 				}
 				mu.Lock()
 				Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
-				mu.Unlock()
-			} else {
+				defer mu.Unlock()
+			} else if entry.Type().IsRegular() {
+				info, err := entry.Info()
+				if err != nil {
+					panic(err)
+				}
+				path, err := getFileLocation(dirname, info.Name())
+				if err != nil {
+					panic(err)
+				}
 				Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size()))
 			}
 		}(entry)
-	}
 
+	}
 	wg.Wait()
 	return Items, nil
 }
@@ -135,16 +95,6 @@ func getFileLocation(root string, filename string) (string, error) {
 func BytesToKB(size int64) string {
 	sizeInKBStr := fmt.Sprintf("%.9f", (float64(size) / 1024.0))
 	return sizeInKBStr + "KB"
-}
-
-// функция GetData извлекает данные из корневого каталога.
-func GetDataRoutine(root string) []file {
-	pathDir := Root{Name: root}
-	dataTable, err := pathDir.GetSubDirRoutine(pathDir.Name)
-	if err != nil {
-		panic(err)
-	}
-	return dataTable
 }
 
 // определение функции для ввода информации классы Files в консоль
@@ -194,7 +144,6 @@ func SortSlice(slice []file, root string, order string) []file {
 	// Создание копию фрагмента, чтобы избежать изменения исходного фрагмента.
 	sortedSlice := make([]file, len(slice))
 	copy(sortedSlice, slice)
-
 	// Определение порядок сортировки на основе корневого параметра.
 	if root != "" && order == "Desc" {
 		// Сортировка по убыванию, если корень пуст.

@@ -35,12 +35,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Root value:", rootValue)
 	fmt.Println("Sort value:", sortValue)
 	sendJSONResponse(w, r, rootValue, sortValue)
-	fmt.Println("JSON Отправлен")
+	fmt.Println("json Отправлен")
 }
 
 // функция, которая отправляет клиенту ответ JSON.
 func sendJSONResponse(w http.ResponseWriter, r *http.Request, root string, sort string) {
-	data, err := functions.GetDirPath(root)
+
+	Root := functions.Root{Name: root}
+	data, err := Root.GetSubDirRoutine(Root.Name) //Вызов функции goroutines
+	if err != nil {
+		panic(err)
+	}
+	// Вызов Сортировки
 	sortSlice := functions.SortSlice(data, root, sort)
 
 	// Маршалируем данные в JSON
@@ -123,4 +129,5 @@ func main() {
 	case err := <-otherErrors:
 		fmt.Printf("Возникла ошибка: %v\n", err)
 	}
+
 }

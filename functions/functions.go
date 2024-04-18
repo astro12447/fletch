@@ -53,7 +53,12 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 		wg.Add(1)
 		go func(entry os.DirEntry) {
 			wg.Done()
-			if entry.IsDir() {
+			info, err := entry.Info()
+			if err != nil {
+				panic(err)
+			}
+			switch mode := info.Mode(); {
+			case mode.IsDir():
 				path, err := getFileLocation(dirname, entry.Name())
 				if err != nil {
 					panic(err)
@@ -62,10 +67,11 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 				if err != nil {
 					panic(err)
 				}
-				mu.Lock()
+				mu.Lock()         //Заблокируем мьютекс перед доступом к общему ресурсу.
+				defer mu.Unlock() //Убедимся, что мьютекс разблокирован после завершения этой горутины.
+				///Критический раздел: общий ресурс защищен мьютексом.
 				Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
-				defer mu.Unlock()
-			} else if entry.Type().IsRegular() {
+			case mode.IsRegular():
 				info, err := entry.Info()
 				if err != nil {
 					panic(err)
@@ -77,7 +83,6 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 				Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size()))
 			}
 		}(entry)
-
 	}
 	wg.Wait()
 	return Items, nil

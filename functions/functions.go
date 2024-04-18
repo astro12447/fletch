@@ -37,7 +37,7 @@ type Root struct {
 	Name string //поле имя файлы
 }
 
-// функция используется для чтения файлов в текущем каталоге mutex
+// функция используется для чтения файлов в текущем каталоге  mutex
 func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 	if !RootExist(dirname) {
 		log.Fatalln("Данный файл или каталог отсутствует!")
@@ -52,7 +52,7 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 	for _, entry := range files {
 		wg.Add(1)
 		go func(entry os.DirEntry) {
-			wg.Done()
+			defer wg.Done()
 			info, err := entry.Info()
 			if err != nil {
 				panic(err)
@@ -61,26 +61,29 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]file, error) {
 			case mode.IsDir():
 				path, err := getFileLocation(dirname, entry.Name())
 				if err != nil {
-					panic(err)
+					return
 				}
 				size, err := dirSize(path)
 				if err != nil {
-					panic(err)
+					return
 				}
-				mu.Lock()         //Заблокируем мьютекс перед доступом к общему ресурсу.
-				defer mu.Unlock() //Убедимся, что мьютекс разблокирован после завершения этой горутины.
-				///Критический раздел: общий ресурс защищен мьютексом.
+				mu.Lock() //Заблокируем мьютекс перед доступом к общему ресурсу.
+				//Критический раздел: общий ресурс защищен мьютексом.
 				Items = append(Items, newfile("Каталог", path, BytesToKB(size), size))
+				mu.Unlock() //Убедимся, что мьютекс разблокирован после завершения этой горутины.
 			case mode.IsRegular():
 				info, err := entry.Info()
 				if err != nil {
-					panic(err)
+					return
 				}
 				path, err := getFileLocation(dirname, info.Name())
 				if err != nil {
 					panic(err)
 				}
+				mu.Lock() //Заблокируем мьютекс перед доступом к общему ресурсу.
+				//Критический раздел: общий ресурс защищен мьютексом.
 				Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size()))
+				mu.Unlock() //Убедимся, что мьютекс разблокирован после завершения этой горутины.
 			}
 		}(entry)
 	}

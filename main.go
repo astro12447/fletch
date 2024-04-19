@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Config представляет конфигурацию приложения.
+// Структура для хранения конфигурации сервера.
 type config struct {
 	Port int64 //Сетевой порт, который будет использоваться.
 }
@@ -27,22 +27,19 @@ func getUrlParameter(req *http.Request, paramName string) string {
 // sortValue: значение параметра sort.
 func handler(w http.ResponseWriter, r *http.Request) {
 	// Получить значение параметра root
-	rootValue := getUrlParameter(r, "root")
-
-	// Получить значение параметра sort
-	sortValue := getUrlParameter(r, "sort")
-	// Выведите значения на консоль
+	rootValue, sortValue := getUrlParameter(r, "root"), getUrlParameter(r, "sort")
 	fmt.Println("Root value:", rootValue)
 	fmt.Println("Sort value:", sortValue)
 	sendJSONResponse(w, r, rootValue, sortValue)
-	fmt.Println("json Отправлен")
+	fmt.Println("json дата успешно отправлен")
 }
 
 // функция, которая отправляет клиенту ответ JSON.
 func sendJSONResponse(w http.ResponseWriter, r *http.Request, root string, sort string) {
-
+	// Теперь в Root хранится экземпляр структуры Root с именем root
 	Root := functions.Root{Name: root}
-	data, err := Root.GetSubDirRoutine(Root.Name) //Вызов функции goroutines
+	//GetSubDirRoutine - пример метода, который возвращает данные и ошибку
+	data, err := Root.GetSubDirRoutine(Root.Name)
 	if err != nil {
 		panic(err)
 	}
@@ -61,24 +58,7 @@ func sendJSONResponse(w http.ResponseWriter, r *http.Request, root string, sort 
 	// Запишите данные JSON в ответ
 	w.Write(jsonData)
 }
-
-func main() {
-	// Создание новый ServeMux
-	mux := http.NewServeMux()
-	//Назначение функцию обработчика каждому URL-пути.
-	mux.HandleFunc("/files", handler)
-	fileServer := http.FileServer(http.Dir("./templates"))
-	// Загрузка файлы в сервер с помощью ServeMux
-	mux.Handle("/", fileServer)
-
-	jsFileServer := http.FileServer(http.Dir("./js"))
-	tsFileServer := http.FileServer(http.Dir("./ts"))
-
-	//Загрузка файлы в сервер  с помощью ServeMux по пути /js/.
-	mux.Handle("/js/", http.StripPrefix("/js/", jsFileServer))
-	mux.Handle("/ts/", http.StripPrefix("/ts/", tsFileServer))
-	// Создание HTTP-сервер
-	// Read the config file
+func getServerPort() (string, error) {
 	configData, err := os.ReadFile("ui/config.json")
 	if err != nil {
 		log.Fatalf("Не удалось прочитать файл конфигурации: %v", err)
@@ -88,9 +68,25 @@ func main() {
 	if err != nil {
 		log.Fatalf("Не удалось проанализировать файл конфигурации.: %v", err)
 	}
-	//создает сервера новую конфигурацию с указанным портом.
+	return fmt.Sprintf(":%d", config.Port), nil
+}
+func main() {
+	// // Создаем новый ServeMux для маршрутизации запросов
+	mux := http.NewServeMux()
+	// Обработчик для всех запросов
+	mux.HandleFunc("/files", handler)
+	//Загрузка файлы в сервер  с помощью ServeMux по пути /js/.
+	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("./js"))))
+	mux.Handle("/ts/", http.StripPrefix("/ts/", http.FileServer(http.Dir("./ts"))))
+	mux.Handle("/", http.FileServer(http.Dir("./templates")))
+	// Получаем номер порта севера
+	portNumber, err := getServerPort()
+	if err != nil {
+		panic(err)
+	}
+	//// Настраиваем сервер
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", config.Port),
+		Addr:    portNumber, //Порт, на котором будет слушать сервер
 		Handler: mux,
 	}
 	// Создайте 2 каналa для прослушивания ошибок, исходящих от прослушивателя. Использовать
@@ -102,7 +98,7 @@ func main() {
 	go func() {
 		serverErrors <- server.ListenAndServe()
 	}()
-	fmt.Println("Сервер работает на порту 8080")
+	fmt.Println("Сервер работает на порту 8080:")
 	// Создание канал для прослушивания сигнала прерывания или завершения от ОС.
 	// Использование буферизованный канал, поскольку этого требует пакет сигналов.
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
@@ -112,7 +108,7 @@ func main() {
 	case err := <-serverErrors:
 		fmt.Printf("Ошибка запуска сервера: %v\n", err)
 	case <-shutdown:
-		fmt.Println("Начало выключения...")
+		fmt.Println("Начало выключения...:")
 		const timeout = 5 * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -126,7 +122,7 @@ func main() {
 			fmt.Printf("Не удалось корректно остановить сервер: %v\n", err)
 		}
 		if err == http.ErrServerClosed {
-			fmt.Println("Сервер успешно завершил работу")
+			fmt.Println("Сервер успешно завершил работу:")
 		}
 	case err := <-otherErrors:
 		fmt.Printf("Возникла ошибка: %v\n", err)

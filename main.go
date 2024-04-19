@@ -70,11 +70,13 @@ func main() {
 	fileServer := http.FileServer(http.Dir("./templates"))
 	// Загрузка файлы в сервер с помощью ServeMux
 	mux.Handle("/", fileServer)
-	jsDir := http.Dir("./js")
-	jsFileServer := http.FileServer(jsDir)
+
+	jsFileServer := http.FileServer(http.Dir("./js"))
+	tsFileServer := http.FileServer(http.Dir("./ts"))
 
 	//Загрузка файлы в сервер  с помощью ServeMux по пути /js/.
 	mux.Handle("/js/", http.StripPrefix("/js/", jsFileServer))
+	mux.Handle("/ts/", http.StripPrefix("/ts/", tsFileServer))
 	// Создание HTTP-сервер
 	// Read the config file
 	configData, err := os.ReadFile("ui/config.json")

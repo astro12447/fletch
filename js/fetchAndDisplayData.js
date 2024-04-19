@@ -16,7 +16,7 @@ async function fetchAndDisplayData(url) {
     console.error('Ошибка при получении элементов:', error);
   }
 }
-// Функция для проверки «params» параметров «root» и «sort».
+// Функция для проверки «params» параметров «root» и «sort»
 function verificateURl() {
   if (params.sort === "&sort=null" && params.root !== null) {
     fetchAndDisplayData(params.root);

@@ -70,15 +70,5 @@ function GetDynamicUrlParams(): { root: string, sort: string } {
         sort: newSort
     };
 }
-//функция, которая будет вызываться при клике на элементы таблицы. Функция принимает один параметр event, который представляет событие клика.
-function cellEventClick(event:MouseEvent):void{
-    const target = event.target as HTMLTableCellElement
-    if (target.tagName==='TD'){
-        const dtValue = target.textContent;
-        console.log("Нажатые данные ячейки", dtValue);
-    }
-}
-//добавляем обработчик событий клика на таблицу. Обработчик событий - это функция cellEventClick, которая будет вызываться при каждом клике на таблицу
-const Table = document.getElementById('filesTable') as HTMLTableElement;
-Table?.addEventListener('click', cellEventClick);
+
 

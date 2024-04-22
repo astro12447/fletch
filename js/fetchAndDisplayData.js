@@ -1,64 +1,88 @@
 // JavaScript-файл
-var params = getDynamicUrlParams();//Получения  с параметрами «params.root» и «params.sort»
-verificateURl();//вызов функции для проверки и обработки «root» и «sort»
+fetchWindowsLink();//вызов функции для проверки и обработки «root» и «sort»
 //Функция для получения данных has JSON с сервера
+
 async function fetchAndDisplayData(url) {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
     if (!response.ok) {
       throw new Error(`HTTP ошибка! положение дел: ${response.status}`);
     }
     console.log("Ответ OK!");
     const files = await response.json();
-    // Вызов функции для отаброжении элементов в таблице.
-    displayItems(files);
+    displayItems(files);// Вызов функции для отаброжении элементов в таблице.
   } catch (error) {
     console.error('Ошибка при получении элементов:', error);
   }
 }
-// Функция для проверки «params» параметров «root» и «sort»
-function verificateURl() {
-  if (params.sort === "&sort=null" && params.root !== null) {
-    fetchAndDisplayData(params.root);
-
-  } else if (params.sort === "&sort=Desc" && params.root !== null) {
-    var concatenateRoot = params.root + "/" + params.sort;
-    fetchAndDisplayData(concatenateRoot);
-  }else{
-    console.log("")
+// Функция для проaверки «params» параметров «root» и «sort»
+function fetchWindowsLink() {
+  let params = setSortAndRoot();//Получения  с параметрами «params.root» и «params.sort»
+  // Предполагая, что setSortAndRoot() возвращает объект со свойствами sort и root.
+  switch (true) { // Использование true в качестве выражения переключения, чтобы всегда входить в блок переключения
+    case params.sort === '&sort=null' && params.root !== null:
+      fetchAndDisplayData(params.root);
+      break; // Сделаем перерыв после выполнения дела, чтобы предотвратить провал.
+    case params.sort === '&sort=Desc' && params.root !== null:
+      let concatenateRoot = (params.root + params.sort);
+      fetchAndDisplayData(concatenateRoot);
+      break; // Сделаем перерыв после выполнения дела, чтобы предотвратить провал.
+    default:
+      console.log("Подходящего случая не найдено!");
   }
 }
-//Функция для создания табличных элементов «tr» и «td». 
+//Функция для создания табличных элементов @«tr» и @«td». 
 function displayItems(items) {
   const filesTableBody = document.getElementById('filesTableBody')
   // Получение элементы, в которых мы хотим отображать данные.
   items.forEach(file => {
-    const row = document.createElement('tr')
-    // Создание ячейки для каждого свойства пользователя.
-    const nameCell = document.createElement('td');
-    nameCell.textContent = file.name;
+    const row = createHTMLELEMENT('tr')// Создаем новую строку таблицы
+    
+    const nameCell = createHTMLELEMENT('td');// Создаем новую ячейку данных таблицы
+    nameCell.textContent = file.name;//Установяем текстовое содержимое ячейки
 
-    const typefileCell = document.createElement('td');
+    const typefileCell = createHTMLELEMENT('td');
     typefileCell.textContent = file.typefile;
 
-    const sizelCell = document.createElement('td');
+    const sizelCell = createHTMLELEMENT('td');
     sizelCell.textContent = file.sizeInKB;
-    // Добавление ячейки в строку
-    row.appendChild(typefileCell);
+
+    const foldeCell = createHTMLELEMENT('td');
+    foldeCell.textContent = file.folder;
+    row.appendChild(typefileCell);// Добавление ячейки в строку
     row.appendChild(nameCell);
     row.appendChild(sizelCell);
-    // Добавление строки в тело таблицы
-    filesTableBody.appendChild(row);
+    row.appendChild(foldeCell);
+    filesTableBody.appendChild(row);// Добавление строки в тело таблицы
   });
 }
+// функция @createHTMLELEMENT предназначена для создания и возврата нового элемента HTML на основе параметра ElementName.
+function createHTMLELEMENT(ElementName) {
+  switch (ElementName) {
+    case 'tr':
+      return document.createElement('tr');
+    case 'td':
+      return document.createElement('td');
+    default:
+      console.log("Неизвестное имя элемента: " + ElementName);
+      return null; // Верните ноль или выдайте ошибку, если элемент не распознан.
+  }
+}
 // Получение текущий URL
-function getDynamicUrlParams() {
-  var url = new URL(window.location.href);
+function setSortAndRoot() {
+  let url = new URL(window.location.href);
   // Получение параметры «root» и «sort».
-  var root = url.searchParams.get('root');
-  var sort = url.searchParams.get('sort');
-  var newRoot = "./files?root=" + root;
-  var newSort = "&sort=" + sort
+  let root = url.searchParams.get('root');
+  let sort = url.searchParams.get('sort');
+  let rootArgument = "./files?root="
+  let newRoot = rootArgument.concat(root);
+  let sortArgument = "&sort="
+  let newSort = sortArgument.concat(sort)
   // Возвращаем объект с параметрами
   return {
     root: newRoot,

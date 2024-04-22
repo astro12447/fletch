@@ -10,24 +10,28 @@
 </head>
 
 <body>
-  <div class="bnt-wrap"></div>
   <div class="bnt-wrap">
-    <button href="#">Back</button>
+    <button id="backButton">Back</button>
   </div>
-  <table id="filesTable">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Root and Dirname/Filename</th>
-        <th>Size</th>
-      </tr>
-    </thead>
-    <tbody id='filesTableBody'>
+  <div class="wrap-color">
+    <table id="filesTable">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Directory Path Name</th>
+          <th>Size</th>
+          <th>Kind</th>
+        </tr>
+      </thead>
+      <tbody id='filesTableBody'>
 
-    </tbody>
-  </table>
+      </tbody>
+    </table>
+  </div>
   <script>
   </script>
+  <script src="/js/handleCellClick.js"></script>
+  <script src="/js/goBackButton.js"></script>
 </body>
 
 </html>

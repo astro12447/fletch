@@ -24,7 +24,7 @@ function VerificateURl(params: { sort: string, root: string | null }): void {
         fetchAndDisplay(parameters.root);
 
     } else if (parameters.sort === "&sort=Desc" && parameters.root !== null) {
-        var concatenateRoot: string = parameters.root + "/" + parameters.sort;
+        let concatenateRoot: string = parameters.root + "/" + parameters.sort;
         fetchAndDisplay(concatenateRoot);
     } else {
         console.log("");
@@ -32,27 +32,26 @@ function VerificateURl(params: { sort: string, root: string | null }): void {
 }
 //Функция для создания табличных элементов «tr» и «td». 
 function DisplayItems(items: Array<{ name: string, typefile: string, sizeInKB: number }>): void {
-    const filesTableBody = document.getElementById('filesTableBody') as HTMLTableElement
+    const filesTableBody = document.getElementById('filesTableBody') as HTMLTableElement;
     // Получение элементов, в которых мы хотим отобразить данные.
     items.forEach(file => {
-        const row: HTMLTableRowElement = document.createElement('tr');
+        const row = document.createElement('tr') as HTMLTableRowElement;
         // Создание ячейки для каждого свойства пользователя.
-        const nameCell: HTMLTableCellElement = document.createElement('td');
+        const nameCell = document.createElement('td') as HTMLTableCellElement;
         nameCell.textContent = file.name;
 
-        const typefileCell: HTMLTableCellElement = document.createElement('td');
+        const typefileCell = document.createElement('td') as HTMLTableCellElement;
         typefileCell.textContent = file.typefile;
 
-        const sizelCell: HTMLTableCellElement = document.createElement('td');
+        const sizelCell = document.createElement('td') as HTMLTableCellElement;
         sizelCell.textContent = file.sizeInKB.toString();
         // Добавление ячейки в строку
         row.appendChild(typefileCell);
         row.appendChild(nameCell);
         row.appendChild(sizelCell);
         // Добавление строки в тело таблицы
-        if (filesTableBody) {
-            filesTableBody.appendChild(row);
-        }
+
+        filesTableBody?.appendChild(row);
     });
 }
 

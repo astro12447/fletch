@@ -7,6 +7,7 @@ import (
 	"functions/functions"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,11 +17,6 @@ import (
 // Структура для хранения конфигурации сервера.
 type config struct {
 	Port int64 //Сетевой порт, который будет использоваться.
-}
-
-// функция, которая получает параметр URL из HTTP-запроса
-func getUrlParameter(req *http.Request, paramName string) string {
-	return req.URL.Query().Get(paramName)
 }
 
 // CustomHandler — это оболочка http.ServeMux, которая регистрирует каждый запрос..
@@ -40,12 +36,19 @@ func (h *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Функция получает из запроса два параметра URL «rootValue» значение корневого параметра.
 // sortValue: значение параметра «sort»
 func handler(w http.ResponseWriter, r *http.Request) {
-	// Получаем значение параметра «root», «sort»
-	root, sort := getUrlParameter(r, "root"), getUrlParameter(r, "sort")
-	fmt.Println("Root value:", root)
-	fmt.Println("Sort value:", sort)
+
+	rawParams := r.URL.RawQuery                   // Получаем необработанную строку запроса.
+	queryParams, err := url.ParseQuery(rawParams) //Разобираем необработанную строку запроса в карту параметров запроса.
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	rootParam := queryParams.Get("root") // Получаем значение «root» параметра
+	sortParam := queryParams.Get("sort") // Получаем значение «sort» параметра
+	fmt.Println("root value:", rootParam)
+	fmt.Println("sort value:", sortParam)
 	// Теперь в Root хранится экземпляр структуры Root с именем «root»
-	Root := functions.Root{Name: root}
+	Root := functions.Root{Name: rootParam}
 	//@GetSubDirRoutine - пример метода, который возвращает данные и ошибку
 	stat, err := os.Stat(Root.Name) //Получаем информацию о файле для корневого каталога.
 	//Если при получении информации о файле произошла ошибка, немедленно вернем.
@@ -65,7 +68,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 		//Отсортируем фрагмент данных файлов, используя предоставленный корень и параметры сортировки.
-		data := functions.SortSlice(filesData, root, sort)
+		data := functions.SortSlice(filesData, rootParam, sortParam)
 		sendJSONResponse(w, r, data) //Отправляем ответ JSON с отсортированными данными.
 	}
 }

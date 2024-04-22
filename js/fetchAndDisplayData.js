@@ -22,7 +22,7 @@ async function fetchAndDisplayData(url) {
 }
 // Функция для проaверки «params» параметров «root» и «sort»
 function fetchWindowsLink() {
-  let params = setSortAndRoot();//Получения  с параметрами «params.root» и «params.sort»
+  const params = setSortAndRoot();//Получения  с параметрами «params.root» и «params.sort»
   // Предполагая, что setSortAndRoot() возвращает объект со свойствами sort и root.
   switch (true) { // Использование true в качестве выражения переключения, чтобы всегда входить в блок переключения
     case params.sort === '&sort=null' && params.root !== null:
@@ -41,18 +41,18 @@ function displayItems(items) {
   const filesTableBody = document.getElementById('filesTableBody')
   // Получение элементы, в которых мы хотим отображать данные.
   items.forEach(file => {
-    const row = createHTMLELEMENT('tr')// Создаем новую строку таблицы
+    const row = createTableElement('tr')// Создаем новую строку таблицы
     
-    const nameCell = createHTMLELEMENT('td');// Создаем новую ячейку данных таблицы
+    const nameCell = createTableElement('td');// Создаем новую ячейку данных таблицы
     nameCell.textContent = file.name;//Установяем текстовое содержимое ячейки
 
-    const typefileCell = createHTMLELEMENT('td');
+    const typefileCell = createTableElement('td');
     typefileCell.textContent = file.typefile;
 
-    const sizelCell = createHTMLELEMENT('td');
+    const sizelCell = createTableElement('td');
     sizelCell.textContent = file.sizeInKB;
 
-    const foldeCell = createHTMLELEMENT('td');
+    const foldeCell = createTableElement('td');
     foldeCell.textContent = file.folder;
     row.appendChild(typefileCell);// Добавление ячейки в строку
     row.appendChild(nameCell);
@@ -62,7 +62,7 @@ function displayItems(items) {
   });
 }
 // функция @createHTMLELEMENT предназначена для создания и возврата нового элемента HTML на основе параметра ElementName.
-function createHTMLELEMENT(ElementName) {
+function createTableElement(ElementName) {
   switch (ElementName) {
     case 'tr':
       return document.createElement('tr');
@@ -79,8 +79,7 @@ function setSortAndRoot() {
   // Получение параметры «root» и «sort».
   let root = url.searchParams.get('root');
   let sort = url.searchParams.get('sort');
-  let rootArgument = "./files?root="
-  let newRoot = rootArgument.concat(root);
+  let newRoot = "./files?root=" + root;
   let sortArgument = "&sort="
   let newSort = sortArgument.concat(sort)
   // Возвращаем объект с параметрами

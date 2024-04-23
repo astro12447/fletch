@@ -26,10 +26,11 @@ function fetchWindowsLink() {
   // Предполагая, что setSortAndRoot() возвращает объект со свойствами sort и root.
   switch (true) { // Использование true в качестве выражения переключения, чтобы всегда входить в блок переключения
     case params.sort === '&sort=null' && params.root !== null:
-      fetchAndDisplayData(params.root);
+      fetchAndDisplayData(params.root); 
       break; // Сделаем перерыв после выполнения дела, чтобы предотвратить провал.
     case params.sort === '&sort=Desc' && params.root !== null:
       let concatenateRoot = (params.root + params.sort);
+      console.log(concatenateRoot)
       fetchAndDisplayData(concatenateRoot);
       break; // Сделаем перерыв после выполнения дела, чтобы предотвратить провал.
     default:
@@ -75,16 +76,36 @@ function createTableElement(ElementName) {
 }
 // Получение текущий URL
 function setSortAndRoot() {
-  let url = new URL(window.location.href);
+  const url = new URL(window.location.href);
   // Получение параметры «root» и «sort».
-  let root = url.searchParams.get('root');
-  let sort = url.searchParams.get('sort');
+  const root = url.searchParams.get('root');
+  const sort = url.searchParams.get('sort');
   let newRoot = "./files?root=" + root;
-  let sortArgument = "&sort="
-  let newSort = sortArgument.concat(sort)
+  let newSort =  "&sort="+ sort;
   // Возвращаем объект с параметрами
   return {
     root: newRoot,
     sort: newSort
   };
 }
+
+// function setAndRoot() {
+//   const url = new URL(window.location.href);
+//   // Получение параметры «root» и «sort».
+//   const root = url.searchParams.get('root');
+//   const sort = url.searchParams.get('sort');
+
+//   // Если параметры root или sort отсутствуют, выходим из функции
+  
+
+//   // Создаем новый URL с обновленными параметрами root и sort
+//   url.searchParams.set('root', root);
+//   url.searchParams.set('sort', sort);
+
+//   // Возвращаем новый URL в виде строки
+//   return url.toString();
+// }
+// const newUrl = setAndRoot();
+// if (newUrl) {
+//   console.log(newUrl); // Выводит новый URL с обновленными параметрами root и sort
+// }

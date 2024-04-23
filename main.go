@@ -35,7 +35,7 @@ func (h *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Функция получает из запроса два параметра URL «rootValue» значение корневого параметра.
 // sortValue: значение параметра «sort»
-func handler(w http.ResponseWriter, r *http.Request) {
+func handlerData(w http.ResponseWriter, r *http.Request) {
 
 	rawParams := r.URL.RawQuery                   // Получаем необработанную строку запроса.
 	queryParams, err := url.ParseQuery(rawParams) //Разобираем необработанную строку запроса в карту параметров запроса.
@@ -105,7 +105,7 @@ func main() {
 	// // Создаем новый ServeMux для маршрутизации запросов
 	mux := http.NewServeMux()
 	// Обработчик для всех запросов
-	mux.HandleFunc("/files", handler)
+	mux.HandleFunc("/files", handlerData)
 	//Загрузкаs файлы в сервер  с помощью ServeMux по пути /js/.
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("./js"))))
 	mux.Handle("/ts/", http.StripPrefix("/ts/", http.FileServer(http.Dir("./ts"))))
@@ -151,7 +151,7 @@ func main() {
 		const timeout = 5 * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		// Просит слушателя выключиться и отключить загрузку.
+		// Просим слушателя выключиться и отключить загрузку.
 		err := server.Shutdown(ctx)
 		if err != nil {
 			fmt.Printf("Грациозное завершение работы не завершилось %v: %v\n", timeout, err)

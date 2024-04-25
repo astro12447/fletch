@@ -15,7 +15,12 @@ async function fetchAndDisplayData(url) {
     }
     console.log("Ответ OK!");
     const files = await response.json();
-    displayItems(files);// Вызов функции для отаброжении элементов в таблице.
+    if (files){
+      displayItems(files);
+    }else{
+      console.error('Директория или файл не содержит элементов');
+    }
+    // Вызов функции для отаброжении элементов в таблице.
   } catch (error) {
     console.error('Ошибка при получении элементов:', error);
   }
@@ -78,10 +83,14 @@ function createTableElement(ElementName) {
 function setSortAndRoot() {
   const url = new URL(window.location.href);
   // Получение параметры «root» и «sort».
-  const root = url.searchParams.get('root');
-  const sort = url.searchParams.get('sort');
-  let newRoot = "./files?root=" + root;
-  let newSort =  "&sort="+ sort;
+  if (url.hostname!=null && url.hostname.split('/')[1]!="?root"){
+    const root = url.searchParams.get('root');
+    const sort = url.searchParams.get('sort');
+    var newRoot = "./files?root=".concat(root);
+    var newSort =  "&sort=".concat(sort);
+  }else{
+    console.log("")
+  }
   // Возвращаем объект с параметрами
   return {
     root: newRoot,

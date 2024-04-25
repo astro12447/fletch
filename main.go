@@ -111,7 +111,7 @@ func main() {
 	mux.Handle("/ts/", http.StripPrefix("/ts/", http.FileServer(http.Dir("./ts"))))
 	mux.Handle("/", http.FileServer(http.Dir("./templates")))
 	mux.Handle("/templates/", http.StripPrefix("/templates/", http.FileServer(http.Dir("./templates"))))
-
+	mux.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
 	// Обернем ServeMux пользовательским обработчиком.
 	handler := &CustomHandler{mux: mux}
 	// Получаем номер порта севера

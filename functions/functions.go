@@ -20,6 +20,7 @@ type File struct {
 
 // «newfile» является функцией-конструктором файловой структуры
 func newfile(typefile string, name string, sizeInKB string, sizeInBytes int64, folder string) File {
+	//Инициализируйте свойства значениями, переданными конструктору.
 	return File{
 		Typefile:    typefile,
 		Name:        name,
@@ -39,58 +40,63 @@ type Root struct {
 	Name string //поле имя файлы
 }
 
-// функция используется для чтения файлов в текущем каталоге  mutex
+// GetSubDirRoutine — это метод корневой структуры, который принимает имя каталога в виде строки и возвращает
+// a slice of File structs and an error.
 func (root *Root) GetSubDirRoutine(dirname string) ([]File, error) {
-	if !RootExist(dirname) {
+	if !RootExist(dirname) { //Проверяем, существует ли каталог. Если этого не произойдет, зарегистрируйте тревожное сообщение и остановите выполнение.
 		log.Panic("Данный файл или каталог отсутствует!")
 	}
+	//Прочтитаем записи справочника. Если произойдет ошибка, верните ее.
 	files, err := os.ReadDir(dirname)
 	if err != nil {
 		return nil, err
 	}
-	var Items []File
+	var Items []File // Инициализируем пустой фрагмент для хранения структур File.
+	//Mutex и WaitGroup для синхронизации.
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-
+	//Перебераем каждую запись каталога.
 	for _, entry := range files {
-		info, err := entry.Info()
+		info, err := entry.Info() // Получаем FileInfo для записи. Если произойдет ошибка, зарегистрируйте ее и перейдите к следующей записи.
 		if err != nil {
 			log.Printf("Ошибка получения информации для %s: %v", entry.Name(), err)
 			continue
 		}
+		//Включаем файловый режим, чтобы определить, каталог это или обычный файл.
 		switch mode := info.Mode(); {
-		case mode.IsDir():
+		case mode.IsDir(): //Если это каталог, увеличиваем счетчик WaitGroup и запустите горутину.
 			wg.Add(1)
 			go func(entry os.DirEntry) {
-				defer wg.Done()
-				path, err := GetFileLocation(dirname, info.Name())
+				defer wg.Done()                                    //Уменьшаем счетчик WaitGroup после завершения горутины.
+				path, err := GetFileLocation(dirname, info.Name()) //Получаем полный путь к каталогу. Если произойдет ошибка, зарегистрируйте ее и вернитесь.
 				if err != nil {
 					log.Printf("Ошибка получения местоположения для %s: %v", entry.Name(), err)
 					return
 				}
+				// Получаем размер каталога. Если произойдет ошибка, зарегистрируйте ее и вернитесь.
 				size, err := dirSize(path)
 				if err != nil {
 					log.Printf("Ошибка получения размера для %s: %v", path, err)
 					return
 				}
+				// Заблокируем мьютекс, чтобы безопасно добавить новый файл в срез «Элементы».
 				mu.Lock()
 				Items = append(Items, newfile("Каталог", path, BytesToKB(size), size, entry.Name()))
 				mu.Unlock()
 			}(entry)
 		case mode.IsRegular():
+			//Если это обычный файл, получите его полный путь и добавьте его в срез «Элементы».
 			path, err := GetFileLocation(dirname, info.Name())
 			if err != nil {
 				log.Printf("Ошибка получения местоположения: %s: %v", info.Name(), err)
 				continue
 			}
-			mu.Lock()
 			Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size(), info.Name()))
-			mu.Unlock()
 		}
 	}
 
-	wg.Wait()
-	return Items, nil
+	wg.Wait()         // Подождем, пока все горутины завершатся.
+	return Items, nil //Вернем срез Items и нулевую ошибку.
 }
 
 // getFileLocation создает путь к файлу для данного имени файла в корневом каталоге.

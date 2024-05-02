@@ -26,7 +26,7 @@ class URLParameter {
     // Сеттер для root.
     public set Root(value: string) {
         if (value !== null && value !== undefined) {
-            this.root = "./files?root="+encodeURIComponent(value);
+            this.root = "./files?root=" + encodeURIComponent(value);
         } else {
             // Обработка случай, когда значение равно нулю или неопределенно
             this.root = "./files"; // Или какое-то другое значение по умолчанию
@@ -82,32 +82,31 @@ async function fetchData(url: string): Promise<void> {
             throw new Error(`HTTP ошибка! положение : ${response.status}`);
         }
         console.log("Response OK!"); // Зарегистрируем сообщение об успехе, если ответ в порядке.
-        const files: File[] = await response.json(); // Разбераем тело ответа в массиве тип File как JSON и дождитесь его завершения.
-        if (files && files.length > 0) { //Если файлы существуют и есть хотя бы один файл, вызовите createCellColumns с файлами.
-            createCellColumns(files);
-        } else {
-            console.error('Элемент не найден');
-        }
+        const files = await response.json(); // Разбераем тело ответа в массиве тип File как JSON и дождитесь его завершения.
+            console.log('Files:', files.Files);
+            console.log('Elapsedtime:', files.elapsedtime);
+            createCellColumns(files.Files);
         // Вызов функции для отображения элементов в таблице
     } catch (error) {
         console.error('Ошибка при выполнении запроса:', error);
     }
 }
+
 //Функция для проверки «params» параметров «root» и «sort».
 function drawFilesTable() {
     const url = new URL(window.location.href); // Создаем новый объект URL-адреса на основе текущего URL-адреса.
     var root = url.searchParams.get('root'); // Получаем значение параметра запроса «root» из URL-адреса.
     var sort = url.searchParams.get('sort'); // Получаем значение параметра запроса «sort» из URL-адреса.
-    switch(true){
+    switch (true) {
         case sort === 'Desc' && root !== null: //Случай, когда сортировка имеет значение «Desc», а корень не равен нулю.
-            const urlparams = new  URLParameter(); //Создаем новый экземпляр URLParameter.
+            const urlparams = new URLParameter(); //Создаем новый экземпляр URLParameter.
             urlparams.Root = root; //Установлем для свойства Root urlparams значение корневой переменной.
             urlparams.Sort = sort; //Установлем для свойства Sort urlparams значение корневой переменной.
             let concat = urlparams.Root.concat(urlparams.Sort) // Объединяем свойств Root и Sort для urlparams
             fetchData(concat);  // Вызовите функцию fetchData с объединенным URL-адресом в качестве аргумента.
             break; // Выйдим из оператора switch после выполнения этого случая.
-        case root !==null && sort==null:  // Случай, когда root не равен нулю, а sort имеет значение NULL.
-            const urlparam = new  URLParameter(); // Создаем новый экземпляр URLParameter.
+        case root !== null && sort == null:  // Случай, когда root не равен нулю, а sort имеет значение NULL.
+            const urlparam = new URLParameter(); // Создаем новый экземпляр URLParameter.
             urlparam.Root = root; // Установлем для свойства Root urlparams значение корневой переменной.
             fetchData(urlparam.Root); //Вызов функцию fetchData с корневым URL-адресом в качестве аргумента.
             break;// Выйдим из оператора switch после выполнения этого случая

@@ -39,12 +39,11 @@ table {
     position: relative;
   }
 
-  .bnt-wrap {
+  .bnts-wrap {
     display: flex;
-    flex-direction: column;
+    flex-direction:column;
     align-items: center;
   }
-
   .dir-flex {
     display: flex;
     flex-direction: column;

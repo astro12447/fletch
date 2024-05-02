@@ -102,12 +102,9 @@ function fetchData(url) {
             }
             console.log("Response OK!"); // Зарегистрируем сообщение об успехе, если ответ в порядке.
             const files = yield response.json(); // Разбераем тело ответа в массиве тип File как JSON и дождитесь его завершения.
-            if (files && files.length > 0) { //Если файлы существуют и есть хотя бы один файл, вызовите createCellColumns с файлами.
-                createCellColumns(files);
-            }
-            else {
-                console.error('Элемент не найден');
-            }
+            console.log('Files:', files.Files);
+            console.log('Elapsedtime:', files.elapsedtime);
+            createCellColumns(files.Files);
             // Вызов функции для отображения элементов в таблице
         }
         catch (error) {

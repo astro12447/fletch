@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"functions/functions"
 	"log"
+	"math/big"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -23,7 +26,38 @@ type config struct {
 type CustomHandler struct {
 	mux *http.ServeMux //Экземпляр ServeMux, который будет обрабатывать запросы.
 }
+type Info struct {
+	Files       []functions.File `json:"Files"`
+	Elapsedtime string           `json:"elapsedtime"`
+	PathName    string           `json:"pathName"`
+}
+type Stat struct {
+	PathName    string `json:"PathName"`
+	ElapsedTime string `json:"ElapsedTime"`
+	Size        string `json:"Size"`
+}
 
+func bytesToMB(bytes int64) *big.Float {
+	const (
+		byte  = 1
+		kByte = 1024 * byte
+		mByte = 1024 * kByte
+	)
+
+	mbits := new(big.Float)
+	mbits.SetFloat64(float64(bytes) / float64(mByte))
+	return mbits
+}
+func sum(files []functions.File) string {
+	var totalSum int64 = 0
+	for _, file := range files {
+		totalSum += file.SizeInBytes
+	}
+	sizeInMB := bytesToMB(totalSum)
+	return sizeInMB.String() + "MB"
+}
+
+// C_path , C_Size , C_time_slap , C_time_modification;
 // @ServeHTTP регистрирует детали запроса и делегирует их обернутому @ServeMux.
 // Он реализует интерфейс @http.Handler.
 func (h *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -58,23 +92,61 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 	//Включаем файловый режим, чтобы определить, обычный ли это файл или каталог.
 	switch mode := stat.Mode(); {
 	case mode.IsRegular():
-		//Если файл является обычным файлом, отправьте ответ JSON без данных.
-		sendJSONResponse(w, r, nil)
+		fmt.Printf("IS REGULAR")
 	case mode.IsDir():
 		//Если файл является каталогом, получаем данные подкаталога, обработаем любые ошибки,
 		//отсортируйте данные, а затем отправьте ответ JSON с отсортированными данными.
+		start := time.Now() //
 		filesData, err := Root.GetSubDirRoutine(Root.Name)
+		elapsed := time.Since(start).String() //
 		if err != nil {
 			panic(err)
 		}
 		//Отсортируем фрагмент данных файлов, используя предоставленный корень и параметры сортировки.
 		data := functions.SortSlice(filesData, rootParam, sortParam)
-		sendJSONResponse(w, r, data) //Отправляем ответ JSON с отсортированными данными.
+		info := Info{Files: data, Elapsedtime: elapsed, PathName: Root.Name}   //
+		sum := sum(info.Files)                                                 //
+		InfoPath := Stat{PathName: Root.Name, ElapsedTime: elapsed, Size: sum} //
+		fmt.Println(InfoPath.PathName, InfoPath.Size, InfoPath.ElapsedTime)    //
+		var wg sync.WaitGroup                                                  //
+		wg.Add(1)                                                              //
+		go sendJSONResponse(w, r, info, &wg)                                   //Отправляем ответ JSON с отсортированными данными.
+		wg.Wait()                                                              //
+		var wg1 sync.WaitGroup                                                 //
+		wg1.Add(1)                                                             //
+		go sendRequestToApache(InfoPath, &wg1)                                 //
+		wg1.Wait()                                                             //
+
 	}
+}
+func sendRequestToApache(Infopath Stat, wg *sync.WaitGroup) error {
+	defer wg.Done()
+	JsonData, err := json.Marshal(Infopath)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", "http://localhost:443/insert.php", bytes.NewBuffer(JsonData))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		fmt.Println("Request sucessful")
+	} else {
+		fmt.Println("Request failed with status:", resp.Status)
+	}
+	return nil
 }
 
 // функция, которая отправляет клиенту ответ JSON.
-func sendJSONResponse(w http.ResponseWriter, r *http.Request, files []functions.File) {
+func sendJSONResponse(w http.ResponseWriter, r *http.Request, files Info, wg *sync.WaitGroup) {
+	defer wg.Done()
 	// Маршалируем данные в @JSON
 	jsonData, err := json.Marshal(files)
 	if err != nil {
@@ -85,6 +157,7 @@ func sendJSONResponse(w http.ResponseWriter, r *http.Request, files []functions.
 	w.Header().Set("Content-Type", "application/json")
 	// Запишите данные @JSON в ответ
 	w.Write(jsonData)
+
 }
 
 // @getServerPort считывает порт сервера из файла конфигурации и возвращает его в виде строки.
@@ -113,6 +186,9 @@ func main() {
 	mux.Handle("/templates/", http.StripPrefix("/templates/", http.FileServer(http.Dir("./templates"))))
 	mux.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
 	// Обернем ServeMux пользовательским обработчиком.
+	//path := "/Users/ismaelnvo/Desktop/"
+	//Root := functions.Root{Name: path}
+
 	handler := &CustomHandler{mux: mux}
 	// Получаем номер порта севера
 	portNumber, err := getServerPort()

@@ -3,6 +3,7 @@ package functions
 import (
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"path/filepath"
 	"sort"
@@ -30,9 +31,42 @@ func newfile(typefile string, name string, sizeInKB string, sizeInBytes int64, f
 	}
 }
 
-// «readPath» — это интерфейс, определяющий метод получения подкаталогов.
-type readPath interface {
-	GetsubDir(root string) ([]File, error)
+type Info struct { // Определяем тип структуры с именем Info
+	Files       []File `json:"Files"`       //
+	Elapsedtime string `json:"elapsedtime"` //Elapsedtime — это строка, представляющая прошедшее время.
+	PathName    string `json:"pathName"`    // PathName — это строка, представляющая имя пути.
+}
+
+// Определяем тип структуры с именем Statistics(Stat)
+type Stat struct {
+	PathName    string `json:"PathName"`    //PathName — это строка, представляющая имя пути.
+	ElapsedTime string `json:"ElapsedTime"` // ElapsedTime — это строка, представляющая прошедшее время.
+	Size        string `json:"Size"`        // Размер — это строка, представляющая размер.
+}
+
+// Эта функция Go bytesToMB предназначена для преобразования целого числа байтов в
+// большое значение. Плавающее значение, представляющее эквивалент в мегабайтах.
+func bytesToMB(bytes int64) *big.Float {
+	const (
+		byte  = 1
+		kByte = 1024 * byte
+		mByte = 1024 * kByte
+	)
+
+	mbits := new(big.Float)
+	mbits.SetFloat64(float64(bytes) / float64(mByte))
+	return mbits
+}
+
+// Эта функция sum предназначена для расчета общего размера списка файлов в мегабайтах и ​
+// ​возврата результата в виде форматированной строки.
+func Sum(files []File) string {
+	var totalSum int64 = 0
+	for _, file := range files {
+		totalSum += file.SizeInBytes
+	}
+	sizeInMB := bytesToMB(totalSum)
+	return sizeInMB.String() + "MB"
 }
 
 // определение структуры для «Root» с одним полем «Name», которое предназначено для представления имени файла или каталога.
@@ -64,7 +98,7 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]File, error) {
 		}
 		//Включаем файловый режим, чтобы определить, каталог это или обычный файл.
 		switch mode := info.Mode(); {
-		case mode.IsDir(): //Если это каталог, увеличиваем счетчик WaitGroup и запустите горутину.
+		case mode.IsDir(): //Если это каталог, увеличиваем 1 счетчик WaitGroup и запустите горутину.
 			wg.Add(1)
 			go func(entry os.DirEntry) {
 				defer wg.Done()                                    //Уменьшаем счетчик WaitGroup после завершения горутины.
@@ -114,10 +148,6 @@ func BytesToKB(size int64) string {
 }
 
 // определение функции для ввода информации классы Files в консоль
-func (ob *File) print() {
-	fmt.Println("Type:", ob.Typefile, "Name:", ob.Name, "FileSize/byte", ob.SizeInBytes)
-}
-
 // dirSize вычисляет общий размер всех файлов в каталоге и его подкаталогах.
 func dirSize(path string) (int64, error) {
 	var size int64
@@ -138,21 +168,6 @@ func RootExist(root string) bool {
 		log.Fatal("Данный файл или каталог отсутствует!")
 	}
 	return true
-}
-
-// метод для получения значения size класса
-func (ob *File) getSize() int64 {
-	return ob.SizeInBytes
-}
-
-// метод для получения значения name класса
-func (ob *File) getName() string {
-	return ob.Name
-}
-
-// метод для получения значения Extension класса
-func (ob *File) getExtension() string {
-	return ob.Typefile
 }
 
 // выборка сортировки

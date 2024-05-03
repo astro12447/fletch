@@ -28,7 +28,7 @@ table {
 
   button {
     margin-bottom: 5px;
-    width: 300px;
+    width: 250px;
     height: 40px;
     margin-top: 20px;
     margin-left: 0 auto;
@@ -36,14 +36,23 @@ table {
     border-radius: 5px;
     background: linear-gradient(156.8deg, rgb(30, 144, 231) 27.1%, rgb(67, 101, 225) 77.8%);
     cursor: pointer;
-    position: relative;
   }
 
   .bnts-wrap {
-    display: flex;
-    flex-direction:column;
-    align-items: center;
+    width: 70%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 50px;
   }
+  .flex-wrap{
+    display: flex;
+    flex-direction:row;
+    align-items:center;
+    align-content:center;
+    justify-content: center;
+    gap: 10px;
+  }
+
   .dir-flex {
     display: flex;
     flex-direction: column;

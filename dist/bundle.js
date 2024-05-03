@@ -105,6 +105,10 @@ function fetchData(url) {
             console.log('Files:', files.Files);
             console.log('Elapsedtime:', files.elapsedtime);
             createCellColumns(files.Files);
+            const btnName = document.getElementById('btn-elapsedtime');
+            if (btnName) {
+                btnName.textContent = 'Elased:' + files.elapsedtime;
+            }
             // Вызов функции для отображения элементов в таблице
         }
         catch (error) {

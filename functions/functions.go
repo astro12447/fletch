@@ -1,9 +1,7 @@
 package functions
 
 import (
-	"fmt"
 	"log"
-	"math/big"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,21 +10,21 @@ import (
 
 // Предполагая, что «file» — это структура, представляющая файл.
 type File struct {
-	Typefile    string `json:"typefile"`    //поле Тип файла
-	Name        string `json:"name"`        //поле Имя файла
-	SizeInKB    string `json:"sizeInKB"`    //поле размер файла в КБ
-	SizeInBytes int64  `json:"sizeInBytes"` //поле размер файла в байтах
-	Folder      string `json:"folder"`
+	Typefile    string  `json:"typefile"`    //поле Тип файла
+	FileName    string  `json:"filename"`    //поле Имя файла
+	SizeInBytes int64   `json:"sizeInBytes"` //поле размер файла в байтах
+	SizeInMB    float64 `json:"sizeInMB"`    //поле размер файла в байтах
+	Folder      string  `json:"folder"`
 }
 
 // «newfile» является функцией-конструктором файловой структуры
-func newfile(typefile string, name string, sizeInKB string, sizeInBytes int64, folder string) File {
+func newfile(typefile string, name string, sizeInBytes int64, SizeInMB float64, folder string) File {
 	//Инициализируйте свойства значениями, переданными конструктору.
 	return File{
 		Typefile:    typefile,
-		Name:        name,
-		SizeInKB:    sizeInKB,
+		FileName:    name,
 		SizeInBytes: sizeInBytes,
+		SizeInMB:    SizeInMB,
 		Folder:      folder,
 	}
 }
@@ -44,29 +42,48 @@ type Stat struct {
 	Size        string `json:"Size"`        // Размер — это строка, представляющая размер.
 }
 
+// Files is a slice of File structs.
+// sortFilesBySizeDesc sorts a slice of File structs in descending order by SizeInBytes.
+// It returns a new slice with the sorted files.
+func SortFilesBySizeDesc(files []File) []File {
+	// Create a copy of the original slice to avoid modifying the original data.
+	sortedFiles := make([]File, len(files))
+	copy(sortedFiles, files)
+	// Sort the copy in descending order by SizeInBytes.
+	sort.Slice(sortedFiles, func(i, j int) bool {
+		return sortedFiles[i].SizeInBytes > sortedFiles[j].SizeInBytes
+	})
+
+	return sortedFiles
+}
+
+func SortFilesBySizeAsc(files []File) []File {
+	// Create a copy of the original slice to avoid modifying the original data.
+	sortedFiles := make([]File, len(files))
+	copy(sortedFiles, files)
+	// Sort the copy in descending order by SizeInBytes.
+	sort.Slice(sortedFiles, func(i, j int) bool {
+		return sortedFiles[i].SizeInBytes < sortedFiles[j].SizeInBytes
+	})
+
+	return sortedFiles
+}
+
 // Эта функция Go bytesToMB предназначена для преобразования целого числа байтов в
 // большое значение. Плавающее значение, представляющее эквивалент в мегабайтах.
-func bytesToMB(bytes int64) *big.Float {
-	const (
-		byte  = 1
-		kByte = 1024 * byte
-		mByte = 1024 * kByte
-	)
-
-	mbits := new(big.Float)
-	mbits.SetFloat64(float64(bytes) / float64(mByte))
-	return mbits
+func bytesToMegaBytes(bytes uint64) float64 {
+	return float64(bytes) / (1024 * 1024)
 }
 
 // Эта функция sum предназначена для расчета общего размера списка файлов в мегабайтах и ​
 // ​возврата результата в виде форматированной строки.
-func Sum(files []File) string {
+func TotalSize(files []File) float64 {
 	var totalSum int64 = 0
 	for _, file := range files {
 		totalSum += file.SizeInBytes
 	}
-	sizeInMB := bytesToMB(totalSum)
-	return sizeInMB.String() + "MB"
+	sizeInMB := bytesToMegaBytes(uint64(totalSum))
+	return sizeInMB
 }
 
 // определение структуры для «Root» с одним полем «Name», которое предназначено для представления имени файла или каталога.
@@ -115,7 +132,7 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]File, error) {
 				}
 				// Заблокируем мьютекс, чтобы безопасно добавить новый файл в срез «Элементы».
 				mu.Lock()
-				Items = append(Items, newfile("Каталог", path, BytesToKB(size), size, entry.Name()))
+				Items = append(Items, newfile("Каталог", path, size, bytesToMegaBytes(uint64(size)), entry.Name()))
 				mu.Unlock()
 			}(entry)
 		case mode.IsRegular():
@@ -125,7 +142,7 @@ func (root *Root) GetSubDirRoutine(dirname string) ([]File, error) {
 				log.Printf("Ошибка получения местоположения: %s: %v", info.Name(), err)
 				continue
 			}
-			Items = append(Items, newfile("Файл", path, BytesToKB(info.Size()), info.Size(), info.Name()))
+			Items = append(Items, newfile("Файл", path, info.Size(), bytesToMegaBytes(uint64(info.Size())), info.Name()))
 		}
 	}
 
@@ -139,12 +156,6 @@ func GetFileLocation(root string, filename string) (string, error) {
 		log.Fatalln("Данный файл или каталог отсутствует!!")
 	}
 	return root + "/" + filename, nil
-}
-
-// функция BytesToKB преобразует размер в байтах в килобайты (КБ) и возвращает его в виде строки.
-func BytesToKB(size int64) string {
-	sizeInKBStr := fmt.Sprintf("%.9f", (float64(size) / 1024.0))
-	return sizeInKBStr + "KB"
 }
 
 // определение функции для ввода информации классы Files в консоль
@@ -168,25 +179,4 @@ func RootExist(root string) bool {
 		log.Fatal("Данный файл или каталог отсутствует!")
 	}
 	return true
-}
-
-// выборка сортировки
-func SortSlice(slice []File, root string, order string) []File {
-	// Создание копию фрагмента, чтобы избежать изменения исходного фрагмента.
-	sortedSlice := make([]File, len(slice))
-	copy(sortedSlice, slice)
-	// Определение порядок сортировки на основе корневого параметра.
-	if root != "" && order == "Desc" {
-		// Сортировка по убыванию, если корень пуст.
-		sort.Slice(sortedSlice, func(i, j int) bool {
-			return sortedSlice[i].SizeInBytes > sortedSlice[j].SizeInBytes
-		})
-	} else if root != "" && order == "" {
-		// Сортировка по возрастанию, если корень не пуст.
-		sort.Slice(sortedSlice, func(i, j int) bool {
-			return sortedSlice[i].SizeInBytes < sortedSlice[j].SizeInBytes
-		})
-	}
-
-	return sortedSlice
 }

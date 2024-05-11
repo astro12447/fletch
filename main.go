@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"functions/functions"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -38,108 +35,68 @@ func (h *CustomHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.mux.ServeHTTP(w, r)
 }
 
+type params struct {
+	root string
+	sort string
+}
+
+func newparams(root, sort string) params {
+	return params{
+		root: root,
+		sort: sort,
+	}
+}
+
 // Функция получает из запроса два параметра URL «rootValue» значение корневого параметра.
 // sortValue: значение параметра «sort»
 func handlerData(w http.ResponseWriter, r *http.Request) {
-
-	rawParams := r.URL.RawQuery                   // Получаем необработанную строку запроса.
-	queryParams, err := url.ParseQuery(rawParams) //Разобираем необработанную строку запроса в карту параметров запроса.
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	rootParam := queryParams.Get("root") // Получаем значение «root» параметра
-	sortParam := queryParams.Get("sort") // Получаем значение «sort» параметра
-	fmt.Println("root value:", rootParam)
-	fmt.Println("sort value:", sortParam)
-	// Теперь в Root хранится экземпляр структуры Root с именем «root»
-	Root := functions.Root{Name: rootParam}
-	//@GetSubDirRoutine - пример метода, который возвращает данные и ошибку
-	stat, err := os.Stat(Root.Name) //Получаем информацию о файле для корневого каталога.
-	//Если при получении информации о файле произошла ошибка, немедленно вернем.
-	if err != nil {
-		return
-	}
-	//Включаем файловый режим, чтобы определить, обычный ли это файл или каталог.
-	switch mode := stat.Mode(); {
-	case mode.IsRegular():
-		fmt.Printf("IS REGULAR")
-	case mode.IsDir():
-		//Если файл является каталогом, получаем данные подкаталога, обработаем любые ошибки,
-		start := time.Now()                                // Запишиваем время начала
-		filesData, err := Root.GetSubDirRoutine(Root.Name) //вызываем метод GetSubDirRoutine для объекта Root и передаем Root.Name в качестве аргумента.
-		elapsed := time.Since(start).String()              // Подсчитаем прошедшее время
+	if r.Method == "GET" {
+		rawParams := r.URL.RawQuery                   // Получаем необработанную строку запроса.
+		queryParams, err := url.ParseQuery(rawParams) //Разобираем необработанную строку запроса в карту параметров запроса.
 		if err != nil {
 			panic(err)
 		}
-		//Отсортируем фрагмент данных файлов, используя предоставленный корень и параметры сортировки.
-		data := functions.SortSlice(filesData, rootParam, sortParam)
-		//Эта структура,  содержит информацию о файлах и времени, затраченном на их обработку.
-		info := functions.Info{Files: data, Elapsedtime: elapsed, PathName: Root.Name}
-		//Функция вычисляет общий размер файлов в срезе и возвращает его. Результат присваивается переменной sum.
-		totalSize := functions.Sum(info.Files)
-		// структура, содержит информацию о пути, затраченном времени и общем размере файлов.
-		InfoPath := functions.Stat{PathName: Root.Name, ElapsedTime: elapsed, Size: totalSize}
-		fmt.Println("Pathinfo:", InfoPath.PathName, InfoPath.Size, InfoPath.ElapsedTime)
-		//Это примитив синхронизации, используемый для ожидания завершения выполнения набора горутин.
-		var wg sync.WaitGroup // WaitGroup для ожидания завершения всех горутин
-		wg.Add(2)             //Добавяем 2 в WaitGroup, чтобы учесть две горутины.
-		//Запускаем две горутины
-		go sendJSONResponse(w, r, info, &wg)
-		go sendRequestToApache(InfoPath, &wg)
-		wg.Wait() //Подождем, пока все горутины завершатся.
-	}
-}
-func sendRequestToApache(Statistics functions.Stat, wg *sync.WaitGroup) error {
-	defer wg.Done()
-	jsonData, err := json.Marshal(Statistics)
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequest("POST", "http://localhost:80/", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		fmt.Println("Запрос успешен")
-	} else {
-		fmt.Println("Запрос не выполнен со статусом:", resp.Status)
-	}
-	// Unmarshal the response body into a struct
-	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	var responseData struct {
-		Message string `json:"message"`
-		Error   string `json:"error"`
-	}
-	err = json.Unmarshal(body, &responseData)
-	if err != nil {
-		return err
-	}
-	// Process the responseData as needed
-	if responseData.Error != "" {
-		return errors.New(responseData.Error)
+		myparams := newparams(queryParams.Get("root"), queryParams.Get("sort"))
+		stat, err := os.Stat(myparams.root)
+		if err != nil {
+			panic(err)
+		}
+		Root := functions.Root{Name: myparams.root}
+		switch mode := stat.Mode(); {
+		case mode.IsDir():
+			//Если файл является каталогом, получаем данные подкаталога, обработаем любые ошибки,
+			start := time.Now()                                 // Запишиваем время начала
+			innerfiles, err := Root.GetSubDirRoutine(Root.Name) //вызываем метод GetSubDirRoutine для объекта Root и передаем Root.Name в качестве аргумента.
+			elapsed := time.Since(start).String()               // Подсчитаем прошедшее время
+			if err != nil {
+				panic(err)
+			}
+			//Отсортируем фрагмент данных файлов, используя предоставленный корень и параметры сортировки.
+			if myparams.sort == "Desc" {
+				sortData := functions.SortFilesBySizeDesc(innerfiles)
+				jsonData := functions.Info{Files: sortData, Elapsedtime: elapsed, PathName: Root.Name}
+				var wg sync.WaitGroup // WaitGroup для ожидания завершения всех горутин
+				wg.Add(1)             //Добавяем 2 в WaitGroup, чтобы учесть две горутины.
+				go sendJSON(w, r, jsonData, &wg)
+				wg.Wait()
+			} else {
+				sortData := functions.SortFilesBySizeAsc(innerfiles)
+				jsonData := functions.Info{Files: sortData, Elapsedtime: elapsed, PathName: Root.Name}
+				var wg sync.WaitGroup // WaitGroup для ожидания завершения всех горутин
+				wg.Add(1)             //Добавяем 2 в WaitGroup, чтобы учесть две горутины.
+				go sendJSON(w, r, jsonData, &wg)
+				wg.Wait()
+			}
+			//one go rutine to send jsonData to the serverApache.
+		default:
+			fmt.Println("")
+		}
 	}
 
-	if responseData.Message != "" {
-		fmt.Println(responseData.Message)
-	}
-	return nil
 }
 
 // функция, которая отправляет клиенту ответ JSON.
-func sendJSONResponse(w http.ResponseWriter, _ *http.Request, files functions.Info, wg *sync.WaitGroup) {
+func sendJSON(w http.ResponseWriter, _ *http.Request, files functions.Info, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// Маршалируем данные в @JSON
 	jsonData, err := json.Marshal(files)
@@ -151,7 +108,6 @@ func sendJSONResponse(w http.ResponseWriter, _ *http.Request, files functions.In
 	w.Header().Set("Content-Type", "application/json")
 	// Запишите данные @JSON в ответ
 	w.Write(jsonData)
-
 }
 
 // @getServerPort считывает порт сервера из файла конфигурации и возвращает его в виде строки.

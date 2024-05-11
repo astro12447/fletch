@@ -19,72 +19,43 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HandleCellClick = exports.Back = void 0;
+exports.HandleCellClick = void 0;
 //Определяем класс файла.
 class File {
     //Конструктор класса File
-    constructor(typefile, name, sizeInKB, folder) {
+    constructor(typefile, filename, sizeInMB, siseInbytes, folder) {
         //Инициализируйте свойства значениями, переданными конструктору.
         this.typefile = typefile;
-        this.name = name;
-        this.sizeInKB = sizeInKB;
+        this.filename = filename;
+        this.sizeInMB = sizeInMB;
+        this.sizeInBytes = siseInbytes;
         this.folder = folder;
     }
 }
-//определяем класс URLParameter, который отвечает за обработку параметров URL.
-class URLParameter {
-    constructor() {
-        this.root = "./files"; //Корневое свойство "root" инициализируется значением по умолчанию «./files». 
-        this.sort = ""; // Свойство "sort" инициализируется пустой строкой, что указывает на то, что сортировка не применяется.
-    }
-    //Геттер для root.
-    get Root() {
-        return this.root;
-    }
-    // Сеттер для root.
-    set Root(value) {
-        if (value !== null && value !== undefined) {
-            this.root = "./files?root=" + encodeURIComponent(value);
-        }
-        else {
-            // Обработка случай, когда значение равно нулю или неопределенно
-            this.root = "./files"; // Или какое-то другое значение по умолчанию
-        }
-    }
-    // Геттер для sort.
-    get Sort() {
-        return this.sort;
-    }
-    //Сеттер для sort.
-    set Sort(value) {
-        if (value !== null && value !== undefined) {
-            this.sort = "&sort=" + encodeURIComponent(value);
-        }
-        else {
-            // Обработка случай, когда значение равно нулю или неопределенно
-            this.sort = ""; // Или какое-то другое значение по умолчанию
-        }
+class params {
+    constructor(root, sort) {
+        this.root = root;
+        this.sort = sort;
     }
 }
-//
-function createCellColumns(items) {
+function drawTable(items) {
     const filesTableBody = document.getElementById('filesTableBody');
     // Получение элементов, в которых мы хотим отобразить данные.
     items.forEach(file => {
         const row = document.createElement('tr');
         // Создание ячейки для каждого свойства пользователя.
         const nameCell = document.createElement('td');
-        nameCell.textContent = file.name;
+        nameCell.textContent = file.filename;
         const typefileCell = document.createElement('td');
         typefileCell.textContent = file.typefile;
-        const sizelCell = document.createElement('td');
-        sizelCell.textContent = file.sizeInKB;
+        const sizeInBMCell = document.createElement('td');
+        sizeInBMCell.textContent = file.sizeInMB + " MB";
         const foldeCell = document.createElement('td');
         foldeCell.textContent = file.folder;
         // Добавление ячейки в строку
         row.appendChild(typefileCell);
         row.appendChild(nameCell);
-        row.appendChild(sizelCell);
+        row.appendChild(sizeInBMCell);
         row.appendChild(foldeCell);
         // Добавление строки в тело таблицы
         if (filesTableBody) {
@@ -104,11 +75,8 @@ function fetchData(url) {
             const files = yield response.json(); // Разбераем тело ответа в массиве тип File как JSON и дождитесь его завершения.
             console.log('Files:', files.Files);
             console.log('Elapsedtime:', files.elapsedtime);
-            createCellColumns(files.Files);
-            const btnName = document.getElementById('btn-elapsedtime');
-            if (btnName) {
-                btnName.textContent = 'Elased:' + files.elapsedtime;
-            }
+            drawTable(files.Files);
+            Drawelapsedtime(files.elapsedtime);
             // Вызов функции для отображения элементов в таблице
         }
         catch (error) {
@@ -116,50 +84,41 @@ function fetchData(url) {
         }
     });
 }
+// insertar texto en el botton con id:elapsedtime.
+function Drawelapsedtime(param) {
+    const elapsedtimeId = document.getElementById('btn-elapsedtime');
+    if (elapsedtimeId) {
+        elapsedtimeId.textContent = 'Elased:' + ' ' + param;
+    }
+}
 //Функция для проверки «params» параметров «root» и «sort».
-function drawFilesTable() {
-    const url = new URL(window.location.href); // Создаем новый объект URL-адреса на основе текущего URL-адреса.
-    var root = url.searchParams.get('root'); // Получаем значение параметра запроса «root» из URL-адреса.
-    var sort = url.searchParams.get('sort'); // Получаем значение параметра запроса «sort» из URL-адреса.
-    switch (true) {
-        case sort === 'Desc' && root !== null: //Случай, когда сортировка имеет значение «Desc», а корень не равен нулю.
-            const urlparams = new URLParameter(); //Создаем новый экземпляр URLParameter.
-            urlparams.Root = root; //Установлем для свойства Root urlparams значение корневой переменной.
-            urlparams.Sort = sort; //Установлем для свойства Sort urlparams значение корневой переменной.
-            let concat = urlparams.Root.concat(urlparams.Sort); // Объединяем свойств Root и Sort для urlparams
-            fetchData(concat); // Вызовите функцию fetchData с объединенным URL-адресом в качестве аргумента.
-            break; // Выйдим из оператора switch после выполнения этого случая.
-        case root !== null && sort == null: // Случай, когда root не равен нулю, а sort имеет значение NULL.
-            const urlparam = new URLParameter(); // Создаем новый экземпляр URLParameter.
-            urlparam.Root = root; // Установлем для свойства Root urlparams значение корневой переменной.
-            fetchData(urlparam.Root); //Вызов функцию fetchData с корневым URL-адресом в качестве аргумента.
-            break; // Выйдим из оператора switch после выполнения этого случая
-        default:
-            console.log("");
+document.addEventListener("DOMContentLoaded", () => {
+    const url = new URL(window.location.href); // files;
+    const param = new params(url.searchParams.get("root"), url.searchParams.get("sort"));
+    if (param.root != "") {
+        url.pathname += "./files";
+        let newULR = url.toString();
+        fetchData(newULR);
     }
+});
+const backbuttom = document.getElementById('backButton');
+if (backbuttom) {
+    backbuttom.addEventListener("click", () => {
+        const url = new URL(window.location.href);
+        let newRoot = url.searchParams.get("root");
+        let parts = newRoot === null || newRoot === void 0 ? void 0 : newRoot.split('/');
+        parts === null || parts === void 0 ? void 0 : parts.pop();
+        newRoot = (parts === null || parts === void 0 ? void 0 : parts.join('/')) || null;
+        if (newRoot) {
+            updateRootParameter(newRoot);
+            window.location.reload();
+        }
+    });
 }
-drawFilesTable(); //вызов Функции для проверки «params»
-//Функция обработки собития на кнопки.
-function Back() {
-    //получаем элемент HTML с идентификатором «backButtom» и приведите его к HTMLElement или нулю.
-    const backbuttom = document.getElementById('backButton');
-    if (backbuttom) { // Проверяем, существует ли backButton
-        //Добовляем прослушиватель событий клика в backButton
-        backbuttom.addEventListener('click', function () {
-            let currentUrl = new URL(window.location.href); // Создаем новый объект URL-адреса на основе текущего URL-адреса.
-            let path = currentUrl.searchParams.get('root'); // Получаем значение параметра запроса «root» из URL-адреса.
-            let parts = path === null || path === void 0 ? void 0 : path.split('/'); // Если путь существует, разделите его на части с помощью '/'
-            parts === null || parts === void 0 ? void 0 : parts.pop(); // Если части существуют, удалите последнюю часть (фактически поднявшись на один уровень вверх).
-            path = (parts === null || parts === void 0 ? void 0 : parts.join('/')) || null; // Соединяем части вместе, чтобы сформировать новый путь.
-            if (path) { // Если путь не равен нулю (т. е. мы не находимся в корневом каталоге)
-                updateRootParameter(path); //Обновлем корневой параметр в URL-адресе.
-                window.location.reload(); // Перезагрузаем страницу, чтобы отразить изменения.
-            }
-        });
-    }
+function convertBytesToMB(bytes) {
+    const megabytes = bytes / (1024 * 1024);
+    return parseFloat(megabytes.toFixed(4));
 }
-exports.Back = Back;
-Back(); //вызов Функции обработки собития на кнопки.
 // Функция для обновления параметра запроса «root» в URL-адресе.
 function updateRootParameter(newRootValue) {
     let url = new URL(window.location.href); // Создаем новый объект URL-адреса на основе текущего URL-адреса.
@@ -175,32 +134,29 @@ function HandleCellClick(event) {
     if (event.target.tagName === 'TD') {
         // Get the text content of the clicked cell
         const cellText = event.target.textContent;
-        windowsLocation(cellText);
+        UpadateRoot(cellText);
     }
 }
 exports.HandleCellClick = HandleCellClick;
-//Функция SetwindowsParams принимает строковый параметр Celldt, который может 
-// быть строковым или нулевым. Затем он создает новый объект URL из текущего местоположения окна.
-function windowsLocation(Celldt) {
-    const url = new URL(window.location.href);
-    // Получаем текущие значения параметров запроса «sort» и «root».
-    let sort = url.searchParams.get('sort');
-    let root = url.searchParams.get('root');
-    if (sort === null && root !== null) {
-        window.location.href = "?root=" + Celldt;
-    }
-    // Если для сортировки установлено значение «Desc», а значение root не 
-    // равно нулю, создайте новый URL-адрес с установленными параметрами root и sort.
-    else if (sort === "Desc" && root !== null) {
-        window.location.href = "?root=" + Celldt + "&sort=Desc";
-    }
-}
 //проверяет, не является ли имя_таблицы нулевым. Если tableName не равно нулю, к 
 //элементу tableName добавляется прослушиватель событий, который прослушивает события щелчка.
 const tableName = document.getElementById('filesTable');
-console.log(tableName);
 if (tableName) {
     tableName.addEventListener('click', HandleCellClick);
+}
+//Функция SetwindowsParams принимает строковый параметр Celldt, который может 
+// быть строковым или нулевым. Затем он создает новый объект URL из текущего местоположения окна.
+function UpadateRoot(Celldt) {
+    const url = new URL(window.location.href);
+    try {
+        if (Celldt) {
+            url.searchParams.set('root', Celldt);
+            window.location.href = url.toString();
+        }
+    }
+    catch (error) {
+        console.error("Cell data  don't exist!");
+    }
 }
 
 

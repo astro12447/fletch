@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"functions/functions"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -87,6 +90,14 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 				go sendJSON(w, r, jsonData, &wg)
 				wg.Wait()
 			}
+			pathSize := functions.TotalSize(innerfiles)
+			strValue := strconv.FormatFloat(pathSize, 'f', 3, 64)
+			pathInfo := functions.Stat{
+				PathName: Root.Name, ElapsedTime: elapsed, Size: strValue,
+			}
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go sendJsonApache(pathInfo, &wg)
 			//one go rutine to send jsonData to the serverApache.
 		default:
 			fmt.Println("")
@@ -108,6 +119,42 @@ func sendJSON(w http.ResponseWriter, _ *http.Request, files functions.Info, wg *
 	w.Header().Set("Content-Type", "application/json")
 	// Запишите данные @JSON в ответ
 	w.Write(jsonData)
+}
+func sendJsonApache(stat functions.Stat, wg *sync.WaitGroup) {
+	defer wg.Done()
+	// Marshal the payload to JSON
+	jsonData, err := json.Marshal(stat)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+		return
+	}
+
+	// Create a new HTTP POST request
+	req, err := http.NewRequest("POST", "http://localhost/insert.php", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return
+	}
+
+	// Set the content type to JSON
+	req.Header.Set("Content-Type", "application/json")
+
+	// Create an HTTP client and send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return
+	}
+	defer resp.Body.Close()
+	// Read the response body
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response:", err)
+		return
+	}
+	// Print the response body
+	fmt.Println("Response:", string(body))
 }
 
 // @getServerPort считывает порт сервера из файла конфигурации и возвращает его в виде строки.

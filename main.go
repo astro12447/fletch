@@ -60,21 +60,14 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 		myparams := newparams(queryParams.Get("root"), queryParams.Get("sort"))
-		stat, err := os.Stat(myparams.root)
-		if err != nil {
-			panic(err)
-		}
-		Root := functions.Root{Name: myparams.root}
-		switch mode := stat.Mode(); {
-		case mode.IsDir():
-			//Если файл является каталогом, получаем данные подкаталога, обработаем любые ошибки,
+		if _, ok := queryParams["root"]; !ok || myparams.root == "" {
+			Root := functions.Root{Name: "/home"}
 			start := time.Now()                                 // Запишиваем время начала
 			innerfiles, err := Root.GetSubDirRoutine(Root.Name) //вызываем метод GetSubDirRoutine для объекта Root и передаем Root.Name в качестве аргумента.
 			elapsed := time.Since(start).String()               // Подсчитаем прошедшее время
 			if err != nil {
 				panic(err)
 			}
-			//Отсортируем фрагмент данных файлов, используя предоставленный корень и параметры сортировки.
 			if myparams.sort == "Desc" {
 				sortData := functions.SortFilesBySizeDesc(innerfiles)
 				jsonData := functions.Info{Files: sortData, Elapsedtime: elapsed, PathName: Root.Name}
@@ -86,21 +79,54 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 				sortData := functions.SortFilesBySizeAsc(innerfiles)
 				jsonData := functions.Info{Files: sortData, Elapsedtime: elapsed, PathName: Root.Name}
 				var wg sync.WaitGroup // WaitGroup для ожидания завершения всех горутин
-				wg.Add(1)             //Добавяем 2 в WaitGroup, чтобы учесть две горутины.
+				wg.Add(1)             //Добавяем 1 в WaitGroup, чтобы учесть две горутины.
 				go sendJSON(w, r, jsonData, &wg)
 				wg.Wait()
 			}
-			pathSize := functions.TotalSize(innerfiles)
-			strValue := strconv.FormatFloat(pathSize, 'f', 3, 64)
-			pathInfo := functions.Stat{
-				PathName: Root.Name, ElapsedTime: elapsed, Size: strValue,
+		} else {
+			stat, err := os.Stat(myparams.root)
+			if err != nil {
+				panic(err)
 			}
-			var wg sync.WaitGroup
-			wg.Add(1)
-			go sendJsonApache(pathInfo, &wg)
-			//one go rutine to send jsonData to the serverApache.
-		default:
-			fmt.Println("")
+			Root := functions.Root{Name: myparams.root}
+			switch mode := stat.Mode(); {
+			case mode.IsDir():
+				//Если файл является каталогом, получаем данные подкаталога, обработаем любые ошибки,
+				start := time.Now()                                 // Запишиваем время начала
+				innerfiles, err := Root.GetSubDirRoutine(Root.Name) //вызываем метод GetSubDirRoutine для объекта Root и передаем Root.Name в качестве аргумента.
+				elapsed := time.Since(start).String()               // Подсчитаем прошедшее время
+				if err != nil {
+					panic(err)
+				}
+				//Отсортируем фрагмент данных файлов, используя предоставленный корень и параметры сортировки.
+				if myparams.sort == "Desc" {
+					sortData := functions.SortFilesBySizeDesc(innerfiles)
+					jsonData := functions.Info{Files: sortData, Elapsedtime: elapsed, PathName: Root.Name}
+					var wg sync.WaitGroup // WaitGroup для ожидания завершения всех горутин
+					wg.Add(1)             //Добавяем 2 в WaitGroup, чтобы учесть две горутины.
+					go sendJSON(w, r, jsonData, &wg)
+					wg.Wait()
+				} else {
+					sortData := functions.SortFilesBySizeAsc(innerfiles)
+					jsonData := functions.Info{Files: sortData, Elapsedtime: elapsed, PathName: Root.Name}
+					var wg sync.WaitGroup // WaitGroup для ожидания завершения всех горутин
+					wg.Add(1)             //Добавяем 1 в WaitGroup, чтобы учесть две горутины.
+					go sendJSON(w, r, jsonData, &wg)
+					wg.Wait()
+				}
+				pathSize := functions.TotalSize(innerfiles)
+				sumValue := strconv.FormatFloat(pathSize, 'f', 3, 64)
+				pathInfo := functions.Stat{
+					PathName: Root.Name, ElapsedTime: elapsed, Size: sumValue,
+				}
+				// одна обычная процедура — отправка jsonData на сервер Apache.
+				var wg sync.WaitGroup
+				wg.Add(1)
+				go sendJsonApache(pathInfo, &wg)
+				wg.Wait()
+			default:
+				fmt.Println("Данный файл или каталог отсутствует")
+			}
 		}
 	}
 
@@ -122,45 +148,46 @@ func sendJSON(w http.ResponseWriter, _ *http.Request, files functions.Info, wg *
 }
 func sendJsonApache(stat functions.Stat, wg *sync.WaitGroup) {
 	defer wg.Done()
-	// Marshal the payload to JSON
+	// мы маршалируем полезную нагрузку в JSON
 	jsonData, err := json.Marshal(stat)
 	if err != nil {
-		fmt.Println("Error marshalling JSON:", err)
+		fmt.Println("Ошибка маршалинга JSON:", err)
 		return
 	}
 
-	// Create a new HTTP POST request
+	// Создаём новый HTTP POST запрос
 	req, err := http.NewRequest("POST", "http://localhost/insert.php", bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("Ошибка создания запроса:", err)
 		return
 	}
 
-	// Set the content type to JSON
+	// мы устанавливаем тип контента JSON
 	req.Header.Set("Content-Type", "application/json")
 
-	// Create an HTTP client and send the request
+	// Создаем HTTP-клиент и отправляем запрос
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		fmt.Println("Ошибка отправки запроса:", err)
 		return
 	}
 	defer resp.Body.Close()
-	// Read the response body
+	// Читаем тело ответа
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response:", err)
+		fmt.Println("Ошибка чтения ответа:", err)
 		return
 	}
-	// Print the response body
-	fmt.Println("Response:", string(body))
+	// Распечатываем тело ответа
+
+	fmt.Println("Ответ:", string(body))
 }
 
 // @getServerPort считывает порт сервера из файла конфигурации и возвращает его в виде строки.
 // Если при чтении файла или синтаксическом анализе JSON возникает ошибка, он регистрирует ошибку и возвращает ее.
 func getServerPort() (string, error) {
-	configData, err := os.ReadFile("ui/config.json") //Попытаем прочитать файл конфигурации.
+	configData, err := os.ReadFile("config/config.json") //Попытаем прочитать файл конфигурации.
 	if err != nil {
 		log.Fatalf("Не удалось прочитать файл конфигурации: %v", err)
 	}
@@ -179,8 +206,8 @@ func main() {
 	//Загрузкаs файлы в сервер  с помощью ServeMux по пути /js/.
 	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("./js"))))
 	mux.Handle("/ts/", http.StripPrefix("/ts/", http.FileServer(http.Dir("./ts"))))
-	mux.Handle("/", http.FileServer(http.Dir("./templates")))
-	mux.Handle("/templates/", http.StripPrefix("/templates/", http.FileServer(http.Dir("./templates"))))
+	mux.Handle("/", http.FileServer(http.Dir("./view")))
+	mux.Handle("/view/", http.StripPrefix("/view/", http.FileServer(http.Dir("./view"))))
 	mux.Handle("/dist/", http.StripPrefix("/dist/", http.FileServer(http.Dir("./dist"))))
 	// Обернем ServeMux пользовательским обработчиком.
 	//path := "/Users/ismaelnvo/Desktop/"

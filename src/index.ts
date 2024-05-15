@@ -1,5 +1,5 @@
 //Определяем класс файла.
-class File {
+class file {
     //Свойства класса File
     filename: string;  //Имя файла
     typefile: string; // тип файла (например, txt, pdf, docx)
@@ -7,27 +7,27 @@ class File {
     sizeInBytes: string;
     folder: string; // Папка, в которой находится файл
     //Конструктор класса File
-    constructor(typefile: string, filename: string, sizeInMB : string,siseInbytes:string, folder: string) {
+    constructor(typefile: string, filename: string, sizeInMB: string, siseInbytes: string, folder: string) {
         //Инициализируйте свойства значениями, переданными конструктору.
         this.typefile = typefile;
         this.filename = filename;
-        this.sizeInMB = sizeInMB ;
+        this.sizeInMB = sizeInMB;
         this.sizeInBytes = siseInbytes;
         this.folder = folder;
     }
 }
-class params{
+class params {
     root: string | null;
     sort: string | null;
-    constructor(root: string|null, sort:string|null){
+    constructor(root: string | null, sort: string | null) {
         this.root = root;
         this.sort = sort;
     }
 }
-function drawTable(items: File[]): void {
+function drawTable(items: file[]): void {
     const filesTableBody = document.getElementById('filesTableBody') as HTMLTableElement;
     // Получение элементов, в которых мы хотим отобразить данные.
-    items.forEach(file => {
+    items.forEach(file=> {
         const row = document.createElement('tr') as HTMLTableRowElement;
         // Создание ячейки для каждого свойства пользователя.
         const nameCell = document.createElement('td') as HTMLTableCellElement;
@@ -36,7 +36,7 @@ function drawTable(items: File[]): void {
         const typefileCell = document.createElement('td') as HTMLTableCellElement;
         typefileCell.textContent = file.typefile;
         const sizeInBMCell = document.createElement('td') as HTMLTableCellElement;
-        sizeInBMCell.textContent = file.sizeInMB +" MB";
+        sizeInBMCell.textContent = file.sizeInMB + " MiB";
         const foldeCell = document.createElement('td') as HTMLTableCellElement;
         foldeCell.textContent = file.folder;
         // Добавление ячейки в строку
@@ -55,65 +55,94 @@ async function fetchData(url: string): Promise<void> {
     try {
         const response = await fetch(url); // Используем API-интерфейс выборки, чтобы сделать запрос GET по предоставленному URL-адресу.
         if (!response.ok) {  // Если ответ не ок (статус не в диапазоне 200-299), выдать ошибку
-            throw new Error(`HTTP ошибка! положение : ${response.status}`);
+            throw new Error("");
         }
         console.log("Response OK!"); // Зарегистрируем сообщение об успехе, если ответ в порядке.
         const files = await response.json(); // Разбераем тело ответа в массиве тип File как JSON и дождитесь его завершения.
-            console.log('Files:', files.Files);
-            console.log('Elapsedtime:', files.elapsedtime);
-            drawTable(files.Files);
-            Drawelapsedtime(files.elapsedtime);
+        console.log('Files:', files.Files);
+        console.log('Elapsedtime:', files.elapsedtime);
+        drawTable(files.Files);
+        Drawelapsedtime(files.elapsedtime);
+        DrawpathName(files.pathName);
         // Вызов функции для отображения элементов в таблице
     } catch (error) {
         console.error('Ошибка при выполнении запроса:', error);
     }
 }
-// insertar texto en el botton con id:elapsedtime.
-function Drawelapsedtime(param:any){
-    const elapsedtimeId = document.getElementById('btn-elapsedtime')
-    if (elapsedtimeId){
-        elapsedtimeId.textContent = 'Elased:'+' '+ param;
+
+function navigateBack() {
+    const currentUrl = new URL(window.location.href);
+    const rootParam = currentUrl.searchParams.get('root');
+    if (rootParam) {
+        const rootParts = rootParam.split('/');
+        rootParts.pop();
+        const newRoot = rootParts.join('/');
+        currentUrl.searchParams.set('root', newRoot);
+        window.location.href = currentUrl.toString();
     }
+}
+
+// insertar texto en el botton con id:elapsedtime.
+function Drawelapsedtime(param: any) {
+    const elapsedtimeId = document.getElementById('btn-elapsedtime')
+    if (elapsedtimeId) {
+        elapsedtimeId.textContent = 'Elased:' + ' ' + param;
+    }
+}
+function DrawpathName(param: any) {
+    const elapsedtimeId = document.getElementById('pathName')
+    if (elapsedtimeId) {
+        elapsedtimeId.textContent = 'PathName:' + ' ' + param;
+    }
+}
+function getJsonDatalink():string{
+    const url = new URL(window.location.href); // files;
+    url.pathname += "./files";
+    let newULR = url.toString();
+    return newULR;
 }
 //Функция для проверки «params» параметров «root» и «sort».
-document.addEventListener("DOMContentLoaded", ()=>{
-    const url = new URL(window.location.href); // files;
-    const param = new params(url.searchParams.get("root"), url.searchParams.get("sort"))
-    if (param.root!=""){
-       url.pathname+="./files";
-       let newULR = url.toString();
-        fetchData(newULR);
+document.addEventListener("DOMContentLoaded", () => {
+    //const url = new URL(window.location.href); // files;
+    //url.pathname += "./files";
+    let newULR = getJsonDatalink();
+    fetchData(newULR);
+    const backbuttom = document.getElementById('backButton');
+    if(backbuttom){
+        backbuttom.addEventListener("click", navigateBack);
     }
 })
-const backbuttom = document.getElementById('backButton');
-if (backbuttom){
-    backbuttom.addEventListener("click", ()=>{
-        const url = new URL(window.location.href);
-        let newRoot = url.searchParams.get("root");
-        let parts = newRoot?.split('/');
-        parts?.pop();
-        newRoot = parts?.join('/')|| null;
-        if (newRoot){
-            updateRootParameter(newRoot);
-            window.location.reload();
-        }    
-    })
+
+document.addEventListener('readystatechange', () => {
+    var state = '';
+    if (document.readyState === "loading") {
+        state = "Loading";
+    } else if (document.readyState === "interactive") {
+        state = "Loading...";
+    } else if (document.readyState === "complete") {
+        state = "Loading......";
+    }
+    updateProgressBar(state);
+});
+
+function updateProgressBar(state: string): void {
+    const progressBar = document.getElementById('progressBar') as HTMLDivElement;
+    const progressText = document.createElement('span');
+    progressText.textContent = state;
+    progressBar.innerHTML = ''; // Clear any previous content
+    progressBar.appendChild(progressText);
+
+    // Update the width of the progress bar based on the state
+    if (state === "Loading") {
+        progressBar.style.width = "33%";
+    } else if (state === "Loading...") {
+        progressBar.style.width = "66%";
+    } else if (state === "Loading......") {
+        progressBar.style.width = "100%";
+    }
 }
-function convertBytesToMB(bytes:number):number{
-    const megabytes = bytes/(1024 * 1024);
-    return parseFloat(megabytes.toFixed(4));
-}
-// Функция для обновления параметра запроса «root» в URL-адресе.
-function updateRootParameter(newRootValue: string): void {
-    let url = new URL(window.location.href);// Создаем новый объект URL-адреса на основе текущего URL-адреса.
-    // Create a new URLSearchParams object from the current URL's search parameters
-    let searchParams = new URLSearchParams(url.search); // Создаём новый объект URLSearchParams на основе параметров поиска текущего URL
-    searchParams.set('root', newRootValue);
-    url.search = searchParams.toString();//Обновяем свойство поиска объекта URL новыми параметрами поиска.
-    history.pushState(null, '', url.toString());//Обновяем историю браузера и URL-адрес без перезагрузки страницы.
-}
-// Функция для обработки щелчка по ячейке
-export function HandleCellClick(event: MouseEvent): void {
+
+function HandleCellClick(event: MouseEvent): void {
     // Check if the clicked element is a TD element
     if ((event.target as HTMLElement).tagName === 'TD') {
         // Get the text content of the clicked cell
@@ -123,7 +152,7 @@ export function HandleCellClick(event: MouseEvent): void {
 }
 //проверяет, не является ли имя_таблицы нулевым. Если tableName не равно нулю, к 
 //элементу tableName добавляется прослушиватель событий, который прослушивает события щелчка.
-const tableName = document.getElementById('filesTable');
+ const tableName = document.getElementById('filesTable');
 if (tableName) {
     tableName.addEventListener('click', HandleCellClick)
 }
@@ -131,13 +160,12 @@ if (tableName) {
 // быть строковым или нулевым. Затем он создает новый объект URL из текущего местоположения окна.
 function UpadateRoot(Celldt: string | null): void {
     const url = new URL(window.location.href);
-    try{
-        if(Celldt){
+    try {
+        if (Celldt) {
             url.searchParams.set('root', Celldt);
             window.location.href = url.toString();
         }
-    }catch(error){
-        console.error("Cell data  don't exist!");
+    } catch (error) {
+        console.error("Данные ячейки не существуют!", error);
     }
 }
-

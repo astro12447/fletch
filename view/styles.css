@@ -1,4 +1,3 @@
-
 body {
   font-family: Arial, sans-serif;
   background-color: #f4f4f4;
@@ -71,3 +70,24 @@ table {
     position: relative;
   }
   
+  .progress-bar-container {
+    width: 100%;
+    background-color: #f3f3f3;
+    padding: 3px;
+    box-sizing: border-box;
+    border-radius: 3px;
+  }
+  .progress-bar {
+    height: 30px;
+    background-color: hsl(122, 39%, 49%);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 3px;
+  }
+#pathName{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 15px;
+}
+

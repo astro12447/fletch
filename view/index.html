@@ -7,11 +7,15 @@
   <title>File table</title>
 </head>
 <body>
+  <div class="progress-bar-container">
+    <div id="progressBar" class="progress-bar"></div>
+  </div>
     <div class="bnts-wrap   flex-wrap">
       <button id="backButton">Back</button>
-      <button id="btn">statistics</button>
+      <button id="btn"  onclick="document.location='http://localhost/index.html'">statistics</button>
       <button id="btn-elapsedtime"></button>
     </div>
+    <h2 id="pathName"></h2>
     <table id="filesTable">
       <thead>
         <tr>

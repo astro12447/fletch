@@ -60,7 +60,7 @@ func handlerData(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 		myparams := newparams(queryParams.Get("root"), queryParams.Get("sort"))
-		if _, ok := queryParams["root"]; !ok || myparams.root == "" {
+		if _, ok := queryParams["root"]; !ok || myparams.root == "" || myparams.root == "/" {
 			Root := functions.Root{Name: "/home"}
 			start := time.Now()                                 // Запишиваем время начала
 			innerfiles, err := Root.GetSubDirRoutine(Root.Name) //вызываем метод GetSubDirRoutine для объекта Root и передаем Root.Name в качестве аргумента.

@@ -39,4 +39,4 @@ fetch('http://localhost/fetch_data.php')
     .then(data => {
         displayItems(data);
     })
-    .catch(error => console.error('Error fetching data:', error));
+    .catch(error => console.error('Ошибка получения данных:', error));

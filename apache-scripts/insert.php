@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === "POST") {
     // мы выполняем заявление
     if ($stmt->execute()) {
         http_response_code(200); // мы устанавливаем код ответа HTTP на 200 (OK)
-        echo json_encode(['message' => 'The data has inserted into the database.']);
+        echo json_encode(['message' => 'Данные вставлены в базу данных.']);
     } else {
         echo "Error: " . $stmt->error;
         http_response_code(500); // мы устанавливаем код ответа HTTP на 500 (внутренняя ошибка сервера)

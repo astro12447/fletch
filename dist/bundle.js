@@ -48,50 +48,6 @@
     });
   };
 
-  // src/model.ts
-  function getJson(url) {
-    return __async(this, null, function* () {
-      try {
-        const response = yield fetch(url);
-        const data = response.json();
-        return data;
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        throw error;
-      }
-    });
-  }
-  function moveBackFromRoot(path) {
-    const parts = path.split("/");
-    parts.pop();
-    const newPath = parts.join("/");
-    return newPath;
-  }
-  function getSort() {
-    const url = new URL(window.location.href);
-    return url.searchParams.get("sort") || "";
-  }
-  var File, params;
-  var init_model = __esm({
-    "src/model.ts"() {
-      File = class {
-        constructor(typefile, filename, sizeInMB, siseInbytes, folder) {
-          this.typefile = typefile;
-          this.filename = filename;
-          this.sizeInMB = sizeInMB;
-          this.sizeInBytes = siseInbytes;
-          this.folder = folder;
-        }
-      };
-      params = class {
-        constructor(root, sort) {
-          this.root = root;
-          this.sort = sort;
-        }
-      };
-    }
-  });
-
   // src/view.ts
   function saveUrlWithRootAndSort(rootValue, sortValue) {
     const currentUrl = new URL(window.location.href);
@@ -134,8 +90,6 @@
     kindHeader.textContent = "Kind";
     headerRow.appendChild(kindHeader);
     thead.appendChild(headerRow);
-    const totalRows = data.length;
-    let drawnRows = 0;
     tableBody.appendChild(thead);
     data.forEach((item) => {
       const row = document.createElement("tr");
@@ -152,19 +106,81 @@
       folderCell.textContent = item.folder;
       row.appendChild(folderCell);
       tableBody.appendChild(row);
-      drawnRows++;
-      const progress = Math.round(drawnRows / totalRows * 100);
-      updateProgressBar(progress);
     });
   }
-  function updateProgressBar(progress) {
-    const progressBar = document.getElementById("tableProgress");
-    if (progressBar) {
-      progressBar.value = progress;
-    }
+  function styleLoadingMessage(message) {
+    message.style.fontSize = "1.5em";
+    message.style.position = "absolute";
+    message.style.top = "0";
+    message.style.left = "0";
+    message.style.width = "100%";
+    message.style.textAlign = "center";
+    message.style.padding = "10px";
+    message.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
+    message.style.borderRadius = "5px";
+    message.style.boxShadow = "0 0 10px rgba(0, 0, 0, 0.2)";
+    message.style.color = "blue";
+  }
+  function removeParag() {
+    const existingLoadingMessages = document.querySelectorAll("p");
+    existingLoadingMessages.forEach((message) => {
+      if (message.textContent === "Loading...") {
+        message.remove();
+      }
+    });
   }
   var init_view = __esm({
     "src/view.ts"() {
+    }
+  });
+
+  // src/model.ts
+  function getJson(url) {
+    return __async(this, null, function* () {
+      try {
+        const loadingMessage = document.createElement("p");
+        loadingMessage.textContent = "Loading...";
+        styleLoadingMessage(loadingMessage);
+        document.body.appendChild(loadingMessage);
+        const response = yield fetch(url);
+        const data = response.json();
+        loadingMessage.style.display = "none";
+        return data;
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        throw error;
+      }
+    });
+  }
+  function moveBackFromRoot(path) {
+    const parts = path.split("/");
+    parts.pop();
+    const newPath = parts.join("/");
+    return newPath;
+  }
+  function getSort() {
+    const url = new URL(window.location.href);
+    return url.searchParams.get("sort") || "";
+  }
+  var File, params;
+  var init_model = __esm({
+    "src/model.ts"() {
+      init_view();
+      File = class {
+        constructor(typefile, filename, sizeInMB, siseInbytes, folder) {
+          this.typefile = typefile;
+          this.filename = filename;
+          this.sizeInMB = sizeInMB;
+          this.sizeInBytes = siseInbytes;
+          this.folder = folder;
+        }
+      };
+      params = class {
+        constructor(root, sort) {
+          this.root = root;
+          this.sort = sort;
+        }
+      };
     }
   });
 
@@ -177,6 +193,7 @@
       url.pathname += "./files";
       var urlString = url.toString();
       document.addEventListener("DOMContentLoaded", () => __async(exports, null, function* () {
+        removeParag();
         const data = yield getJson(urlString);
         drawTable(data.Files);
         drawpathName(data.pathName);
@@ -184,6 +201,7 @@
       }));
       var table = document.getElementById("filesTable");
       table.addEventListener("click", (event) => {
+        removeParag();
         const rowData = handleCellClick(event);
         if (rowData) {
           if (rowData[0] == "\u041A\u0430\u0442\u0430\u043B\u043E\u0433") {
@@ -209,6 +227,7 @@
       }
       var button = document.getElementById("moveBackButton");
       button.addEventListener("click", () => {
+        removeParag();
         const currentRootElement = document.getElementById("pathName");
         const currentRoot = currentRootElement.textContent || "";
         if (currentRoot !== null) {
@@ -239,7 +258,9 @@
     getSort: () => getSort,
     moveBackFromRoot: () => moveBackFromRoot,
     params: () => params,
-    saveUrlWithRootAndSort: () => saveUrlWithRootAndSort
+    removeParag: () => removeParag,
+    saveUrlWithRootAndSort: () => saveUrlWithRootAndSort,
+    styleLoadingMessage: () => styleLoadingMessage
   });
   __reExport(src_exports, __toESM(require_controller()));
   init_model();
